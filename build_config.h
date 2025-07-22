@@ -14,7 +14,7 @@ Description:
 #ifndef _BUILD_CONFIG_H
 #define /* Don't show in CSwitch */ _BUILD_CONFIG_H
 
-#define BUILD_PIG_BUILD 1
+#define BUILD_PIG_BUILD 0
 
 // Controls whether we are making a build that we want to run with a Debugger.
 // This often sacrifices runtime speed or code size for extra debug information.
@@ -25,7 +25,7 @@ Description:
 // The .exe will use the resources_zip.h/c file instead of loading resources from disk
 #define USE_BUNDLED_RESOURCES   0
 // Enables linking with tracy.lib to enable profiling through Tracy
-#define PROFILING_ENABLED       0
+#define PROFILING_ENABLED       1
 
 
 // Build .exe binaries for Windows platform
@@ -64,10 +64,10 @@ Description:
 #define BUILD_PHYSX_OBJ 0
 
 // Builds dll_main.c into pig_core.dll and pig_core.lib
-#define BUILD_PIG_CORE_DLL            1
+#define BUILD_PIG_CORE_DLL            0
 
 // Compiles app/platform_main.c to %PROJECT_EXE_NAME%.exe
-#define BUILD_APP_EXE  1
+#define BUILD_APP_EXE  0
 // Compiles app/app_main.c to %PROJECT_DLL_NAME%.dll
 #define BUILD_APP_DLL  1
 // Runs the %PROJECT_EXE_NAME%.exe
@@ -93,7 +93,7 @@ Description:
 // Enables being linked with raylib.lib and it's required libraries
 #define BUILD_WITH_RAYLIB     0
 // Enables being linked with box2d.lib and it's required libraries
-#define BUILD_WITH_BOX2D      1
+#define BUILD_WITH_BOX2D      0
 // Enables using sokol_gfx.h header files (and on non-windows OS' adds required libraries for Sokol to work)
 #define BUILD_WITH_SOKOL_GFX  1
 // Enables using sokol_app.h header files (and on non-windows OS' adds required libraries for Sokol to work)
@@ -103,7 +103,7 @@ Description:
 // Enables being linked with openvr_api.lib and it's required libraries
 #define BUILD_WITH_OPENVR     0
 // Enables using Clay header files
-#define BUILD_WITH_CLAY       0
+#define BUILD_WITH_CLAY       1
 // Enables using Dear ImGui through cimgui.h/cpp
 #define BUILD_WITH_IMGUI      0
 // Enables being linked with PhysX_static_64.lib as well as physx_capi.obj
