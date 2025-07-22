@@ -81,8 +81,14 @@ struct AppData
 	HttpVerb httpVerb;
 	
 	UiTextbox urlTextbox;
+	UiListView headersListView;
+	bool removedHeaderThisFrame;
+	bool editedHeaderInputSinceFilled;
 	UiTextbox headerKeyTextbox;
 	UiTextbox headerValueTextbox;
+	UiListView contentListView;
+	bool removedContentThisFrame;
+	bool editedContentInputSinceFilled;
 	UiTextbox contentKeyTextbox;
 	UiTextbox contentValueTextbox;
 	

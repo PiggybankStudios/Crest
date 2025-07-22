@@ -132,8 +132,10 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	app->clayUiFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE);
 	
 	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://www.kagi.com/"), &app->urlTextbox);
+	InitUiListView(stdHeap, StrLit("HeadersListView"), &app->headersListView);
 	InitUiTextbox(stdHeap, StrLit("HeaderKeyTextbox"), StrLit(""), &app->headerKeyTextbox);
 	InitUiTextbox(stdHeap, StrLit("HeaderValueTextbox"), StrLit(""), &app->headerValueTextbox);
+	InitUiListView(stdHeap, StrLit("ContentListView"), &app->contentListView);
 	InitUiTextbox(stdHeap, StrLit("ContentKeyTextbox"), StrLit(""), &app->contentKeyTextbox);
 	InitUiTextbox(stdHeap, StrLit("ContentValueTextbox"), StrLit(""), &app->contentValueTextbox);
 	
@@ -150,6 +152,76 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	ScratchEnd(scratch3);
 	TracyCZoneEnd(Zone_Func);
 	return (void*)app;
+}
+
+// +==============================+
+// |       RenderHeaderItem       |
+// +==============================+
+// void RenderHeaderItem(UiListView* list, void* item, uxx index, bool isSelected, bool isHovered)
+UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHeaderItem)
+{
+	Str8Pair* header = (Str8Pair*)((UiListViewItem*)item)->contextPntr;
+	if (app->removedHeaderThisFrame) { header--; }
+	CLAY_TEXT(
+		PrintInArenaStr(uiArena, "%.*s=%.*s", StrPrint(header->key), StrPrint(header->value)),
+		CLAY_TEXT_CONFIG({
+			.fontId = app->clayUiFontId,
+			.fontSize = (u16)app->uiFontSize,
+			.textColor = isSelected ? MonokaiDarkGray : MonokaiWhite,
+			.wrapMode = CLAY_TEXT_WRAP_NONE,
+			.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+			.userData = { .contraction = TextContraction_EllipseRight },
+	}));
+	
+	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
+	
+	Str8 btnIdStr = PrintInArenaStr(uiArena, "Header_Item%llu_%.*s_DeleteBtn", index, StrPrint(header->key));
+	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, nullptr))
+	{
+		if (!app->removedHeaderThisFrame)
+		{
+			VarArray* headerArray = (VarArray*)list->contextPntr;
+			FreeStr8(stdHeap, &header->key);
+			FreeStr8(stdHeap, &header->value);
+			VarArrayRemoveAt(Str8Pair, headerArray, index);
+			app->removedHeaderThisFrame = true;
+		}
+	} Clay__CloseElement();
+}
+
+// +==============================+
+// |      RenderContentItem       |
+// +==============================+
+// void RenderContentItem(UiListView* list, void* item, uxx index, bool isSelected, bool isHovered)
+UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
+{
+	Str8Pair* contentItem = (Str8Pair*)((UiListViewItem*)item)->contextPntr;
+	if (app->removedContentThisFrame) { contentItem--; }
+	CLAY_TEXT(
+		PrintInArenaStr(uiArena, "%.*s=%.*s", StrPrint(contentItem->key), StrPrint(contentItem->value)),
+		CLAY_TEXT_CONFIG({
+			.fontId = app->clayUiFontId,
+			.fontSize = (u16)app->uiFontSize,
+			.textColor = isSelected ? MonokaiDarkGray : MonokaiWhite,
+			.wrapMode = CLAY_TEXT_WRAP_NONE,
+			.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+			.userData = { .contraction = TextContraction_EllipseRight },
+	}));
+	
+	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
+	
+	Str8 btnIdStr = PrintInArenaStr(uiArena, "Content_Item%llu_%.*s_DeleteBtn", index, StrPrint(contentItem->key));
+	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, nullptr))
+	{
+		if (!app->removedContentThisFrame)
+		{
+			VarArray* contentItemArray = (VarArray*)list->contextPntr;
+			FreeStr8(stdHeap, &contentItem->key);
+			FreeStr8(stdHeap, &contentItem->value);
+			VarArrayRemoveAt(Str8Pair, contentItemArray, index);
+			app->removedContentThisFrame = true;
+		}
+	} Clay__CloseElement();
 }
 
 // +==============================+
@@ -262,6 +334,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	}
 	TracyCZoneEnd(Zone_Update);
 	
+	// +==============================+
+	// |            Render            |
+	// +==============================+
 	TracyCZoneN(Zone_Render, "Render", true);
 	SetTextBackgroundColor(MonokaiBack);
 	BeginFrame(platform->GetSokolSwapchain(), screenSizei, MonokaiBack, 1.0f);
@@ -288,6 +363,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		NotNull(uiFontAtlas);
 		r32 fontHeight = uiFontAtlas->lineHeight;
 		
+		// +==============================+
+		// |          Render UI           |
+		// +==============================+
 		CLAY({ .id = CLAY_ID("FullscreenContainer"),
 			.layout = {
 				.layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -297,6 +375,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			.backgroundColor = MonokaiBack,
 		})
 		{
+			// +==============================+
+			// |         URL Textbox          |
+			// +==============================+
 			CLAY({ .id = CLAY_ID("UrlRow"),
 				.layout = {
 					.sizing = { .width = CLAY_SIZING_GROW(0) },
@@ -319,6 +400,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				DoUiTextbox(&app->urlTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 			}
 			
+			// +==============================+
+			// |          Inputs Row          |
+			// +==============================+
 			CLAY({ .id = CLAY_ID("InputsRow"),
 				.layout = {
 					.sizing = { .width = CLAY_SIZING_FIXED(screenSize.Width), .height = CLAY_SIZING_PERCENT(0.40f) },
@@ -347,28 +431,50 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 					}));
 					
-					CLAY({ .id = CLAY_ID("HeadersScrollContainer"),
-						.layout = {
-							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-							.layoutDirection = CLAY_TOP_TO_BOTTOM,
-						},
-						.scroll = { .vertical = true },
-						.backgroundColor = MonokaiDarkGray,
-						.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(1)), .color = MonokaiWhite },
-					})
 					{
-						VarArrayLoop(&app->httpHeaders, hIndex)
+						UiListViewItem* headerListItems = nullptr;
+						if (app->httpHeaders.length > 0)
 						{
-							VarArrayLoopGet(Str8Pair, entry, &app->httpHeaders, hIndex);
-							CLAY_TEXT(
-								PrintInArenaStr(uiArena, "%.*s=%.*s", StrPrint(entry->key), StrPrint(entry->value)),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
+							headerListItems = AllocArray(UiListViewItem, scratch, app->httpHeaders.length);
+							NotNull(headerListItems);
+							VarArrayLoop(&app->httpHeaders, hIndex)
+							{
+								VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
+								UiListViewItem* item = &headerListItems[hIndex];
+								item->idStr = AllocStr8(scratch, header->key);
+								item->render = RenderHeaderItem;
+								item->contextPntr = (void*)header;
+							}
+						}
+						app->headersListView.contextPntr = (void*)&app->httpHeaders;
+						app->removedHeaderThisFrame = false;
+						DoUiListView(&app->headersListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+							CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							app->httpHeaders.length, headerListItems,
+							nullptr, 0x00, 0, app->uiScale);
+						
+						if (app->headersListView.selectionChanged)
+						{
+							app->headersListView.selectionChanged = false;
+							if (app->headersListView.selectionActive && !app->removedHeaderThisFrame)
+							{
+								if (!app->editedHeaderInputSinceFilled || (app->headerKeyTextbox.text.length == 0 && app->headerValueTextbox.text.length == 0))
+								{
+									Str8Pair* header = VarArrayGet(Str8Pair, &app->httpHeaders, app->headersListView.selectionIndex);
+									UiTextboxSetText(&app->headerKeyTextbox, header->key);
+									UiTextboxSetText(&app->headerValueTextbox, header->value);
+									app->headerKeyTextbox.textChanged = false;
+									app->headerValueTextbox.textChanged = false;
+									app->editedHeaderInputSinceFilled = false;
+								}
+							}
+							else if (!app->headersListView.selectionActive && !app->editedHeaderInputSinceFilled)
+							{
+								UiTextboxClear(&app->headerKeyTextbox);
+								UiTextboxClear(&app->headerValueTextbox);
+								app->headerKeyTextbox.textChanged = false;
+								app->headerValueTextbox.textChanged = false;
+							}
 						}
 					}
 					
@@ -387,6 +493,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}));
 							
 							DoUiTextbox(&app->headerKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+							if (app->headerKeyTextbox.textChanged)
+							{
+								app->headerKeyTextbox.textChanged = false;
+								app->editedHeaderInputSinceFilled = true;
+							}
 						}
 						
 						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
@@ -402,6 +513,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}));
 							
 							DoUiTextbox(&app->headerValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+							if (app->headerValueTextbox.textChanged)
+							{
+								app->headerValueTextbox.textChanged = false;
+								app->editedHeaderInputSinceFilled = true;
+							}
 						}
 						
 						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) }, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER } } })
@@ -436,28 +552,50 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 					}));
 					
-					CLAY({ .id = CLAY_ID("ContentScrollContainer"),
-						.layout = {
-							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-							.layoutDirection = CLAY_TOP_TO_BOTTOM,
-						},
-						.scroll = { .vertical = true },
-						.backgroundColor = MonokaiDarkGray,
-						.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(1)), .color = MonokaiWhite },
-					})
 					{
-						VarArrayLoop(&app->httpContent, hIndex)
+						UiListViewItem* contentListItems = nullptr;
+						if (app->httpContent.length > 0)
 						{
-							VarArrayLoopGet(Str8Pair, entry, &app->httpContent, hIndex);
-							CLAY_TEXT(
-								PrintInArenaStr(uiArena, "%.*s=%.*s", StrPrint(entry->key), StrPrint(entry->value)),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
+							contentListItems = AllocArray(UiListViewItem, scratch, app->httpContent.length);
+							NotNull(contentListItems);
+							VarArrayLoop(&app->httpContent, cIndex)
+							{
+								VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
+								UiListViewItem* item = &contentListItems[cIndex];
+								item->idStr = AllocStr8(scratch, contentItem->key);
+								item->render = RenderContentItem;
+								item->contextPntr = (void*)contentItem;
+							}
+						}
+						app->contentListView.contextPntr = (void*)&app->httpContent;
+						app->removedContentThisFrame = false;
+						DoUiListView(&app->contentListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+							CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							app->httpContent.length, contentListItems,
+							nullptr, 0x00, 0, app->uiScale);
+						
+						if (app->contentListView.selectionChanged)
+						{
+							app->contentListView.selectionChanged = false;
+							if (app->contentListView.selectionActive && !app->removedContentThisFrame)
+							{
+								if (!app->editedContentInputSinceFilled || (app->contentKeyTextbox.text.length == 0 && app->contentValueTextbox.text.length == 0))
+								{
+									Str8Pair* contentItem = VarArrayGet(Str8Pair, &app->httpContent, app->contentListView.selectionIndex);
+									UiTextboxSetText(&app->contentKeyTextbox, contentItem->key);
+									UiTextboxSetText(&app->contentValueTextbox, contentItem->value);
+									app->contentKeyTextbox.textChanged = false;
+									app->contentValueTextbox.textChanged = false;
+									app->editedContentInputSinceFilled = false;
+								}
+							}
+							else if (!app->contentListView.selectionActive && !app->editedContentInputSinceFilled)
+							{
+								UiTextboxClear(&app->contentKeyTextbox);
+								UiTextboxClear(&app->contentValueTextbox);
+								app->contentKeyTextbox.textChanged = false;
+								app->contentValueTextbox.textChanged = false;
+							}
 						}
 					}
 					
@@ -476,6 +614,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}));
 							
 							DoUiTextbox(&app->contentKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+							if (app->contentKeyTextbox.textChanged)
+							{
+								app->contentKeyTextbox.textChanged = false;
+								app->editedContentInputSinceFilled = true;
+							}
 						}
 						
 						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
@@ -491,6 +634,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}));
 							
 							DoUiTextbox(&app->contentValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+							if (app->contentValueTextbox.textChanged)
+							{
+								app->contentValueTextbox.textChanged = false;
+								app->editedContentInputSinceFilled = true;
+							}
 						}
 						
 						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) } } })
@@ -530,6 +678,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				} Clay__CloseElement();
 			}
 			
+			// +==============================+
+			// |          Result Row          |
+			// +==============================+
 			CLAY({ .id = CLAY_ID("ResultRow"),
 				.layout = {
 					.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
@@ -613,6 +764,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						}
 					}
 					
+					// +==============================+
+					// |       Result Container       |
+					// +==============================+
 					CLAY({ .id = CLAY_ID("ResultContainer"),
 						.layout = {
 							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
@@ -666,23 +820,47 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	
 	if (addHeader && canAddHeader)
 	{
-		//TODO: Check if a header by this key already exists and replace it
-		Str8Pair* newHeader = VarArrayAdd(Str8Pair, &app->httpHeaders);
-		NotNull(newHeader);
-		newHeader->key = AllocStr8(stdHeap, app->headerKeyTextbox.text);
-		newHeader->value = AllocStr8(stdHeap, app->headerValueTextbox.text);
-		UiTextboxDeleteBytes(&app->headerKeyTextbox, 0, app->headerKeyTextbox.text.length);
-		UiTextboxDeleteBytes(&app->headerValueTextbox, 0, app->headerValueTextbox.text.length);
+		uxx existingIndex = FindStr8PairInArray(&app->httpHeaders, app->headerKeyTextbox.text);
+		if (existingIndex < app->httpHeaders.length)
+		{
+			Str8Pair* existingHeader = VarArrayGet(Str8Pair, &app->httpHeaders, existingIndex);
+			if (!StrExactEquals(existingHeader->value, app->headerValueTextbox.text))
+			{
+				FreeStr8(stdHeap, &existingHeader->value);
+				existingHeader->value = AllocStr8(stdHeap, app->headerValueTextbox.text);
+			}
+		}
+		else
+		{
+			Str8Pair* newHeader = VarArrayAdd(Str8Pair, &app->httpHeaders);
+			NotNull(newHeader);
+			newHeader->key = AllocStr8(stdHeap, app->headerKeyTextbox.text);
+			newHeader->value = AllocStr8(stdHeap, app->headerValueTextbox.text);
+		}
+		UiTextboxClear(&app->headerKeyTextbox);
+		UiTextboxClear(&app->headerValueTextbox);
 	}
 	if (addContent && canAddContent)
 	{
-		//TODO: Check if a header by this key already exists and replace it
-		Str8Pair* newContent = VarArrayAdd(Str8Pair, &app->httpContent);
-		NotNull(newContent);
-		newContent->key = AllocStr8(stdHeap, app->contentKeyTextbox.text);
-		newContent->value = AllocStr8(stdHeap, app->contentValueTextbox.text);
-		UiTextboxDeleteBytes(&app->contentKeyTextbox, 0, app->contentKeyTextbox.text.length);
-		UiTextboxDeleteBytes(&app->contentValueTextbox, 0, app->contentValueTextbox.text.length);
+		uxx existingIndex = FindStr8PairInArray(&app->httpContent, app->contentKeyTextbox.text);
+		if (existingIndex < app->httpContent.length)
+		{
+			Str8Pair* existingContentItem = VarArrayGet(Str8Pair, &app->httpContent, existingIndex);
+			if (!StrExactEquals(existingContentItem->value, app->contentValueTextbox.text))
+			{
+				FreeStr8(stdHeap, &existingContentItem->value);
+				existingContentItem->value = AllocStr8(stdHeap, app->contentValueTextbox.text);
+			}
+		}
+		else
+		{
+			Str8Pair* newContentItem = VarArrayAdd(Str8Pair, &app->httpContent);
+			NotNull(newContentItem);
+			newContentItem->key = AllocStr8(stdHeap, app->contentKeyTextbox.text);
+			newContentItem->value = AllocStr8(stdHeap, app->contentValueTextbox.text);
+		}
+		UiTextboxClear(&app->contentKeyTextbox);
+		UiTextboxClear(&app->contentValueTextbox);
 	}
 	if (makeRequest && canMakeRequest)
 	{

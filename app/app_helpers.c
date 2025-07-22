@@ -215,4 +215,14 @@ bool ClayBtn(const char* btnText, const char* hotkeyStr, bool isEnabled, r32 gro
 	return ClayBtnStr(StrLit(btnText), StrLit(hotkeyStr), isEnabled, growWidth, icon);
 }
 
+uxx FindStr8PairInArray(VarArray* array, Str8 key)
+{
+	VarArrayLoop(array, iIndex)
+	{
+		VarArrayLoopGet(Str8Pair, item, array, iIndex);
+		if (StrExactEquals(item->key, key)) { return iIndex; }
+	}
+	return array->length;
+}
+
 #endif //BUILD_WITH_SOKOL_GFX

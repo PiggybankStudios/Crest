@@ -1,5 +1,6 @@
 // raddbg 0.9.20 project file
 
+recent_file: path: "core/struct/struct_var_array.h"
 recent_file: path: "core/third_party/clay/clay_private_api.c"
 recent_file: path: "core/ui/ui_clay_textbox.h"
 recent_file: path: "core/gfx/gfx_clay_renderer.h"
