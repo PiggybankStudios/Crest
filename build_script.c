@@ -276,6 +276,8 @@ int main(int argc, char* argv[])
 	CliArgList gcc_PlaydateDeviceLinkerFlags     = ZEROED; Fill_gcc_PlaydateDeviceLinkerFlags(&gcc_PlaydateDeviceLinkerFlags, playdateSdkDir);
 	CliArgList pdc_CommonFlags                   = ZEROED; Fill_pdc_CommonFlags(&pdc_CommonFlags, playdateSdkDir);
 	
+	// AddArg(&cl_CommonLinkerFlags, "/DYNAMICBASE:NO");
+	// AddArg(&cl_CommonFlags, CL_ENABLE_ADDRESS_SANATIZER);
 	AddArgNt(&cl_CommonFlags, CL_INCLUDE_DIR, "[ROOT]/app");
 	AddArgNt(&cl_CommonFlags, CL_INCLUDE_DIR, "[ROOT]/core");
 	AddArgNt(&cl_CommonLinkerFlags, LINK_LIBRARY_DIR, DEBUG_BUILD ? "[ROOT]/core/third_party/_lib_debug" : "[ROOT]/core/third_party/_lib_release");

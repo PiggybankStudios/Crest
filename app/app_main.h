@@ -53,6 +53,7 @@ typedef plex HistoryItem HistoryItem;
 plex HistoryItem
 {
 	Arena* arena;
+	u64 id;
 	Str8 url;
 	HttpVerb verb;
 	uxx numHeaders;
@@ -70,12 +71,12 @@ struct AppData
 	
 	Shader mainShader;
 	PigFont uiFont;
-	PigFont largeFont;
 	
 	ClayUIRenderer clay;
 	r32 uiScale;
 	r32 uiFontSize;
 	u16 clayUiFontId;
+	u16 clayUiBoldFontId;
 	
 	UiTextbox* focusedTextbox;
 	HttpVerb httpVerb;
@@ -91,10 +92,12 @@ struct AppData
 	bool editedContentInputSinceFilled;
 	UiTextbox contentKeyTextbox;
 	UiTextbox contentValueTextbox;
+	UiListView historyListView;
 	
 	VarArray httpHeaders; //Str8Pair
 	VarArray httpContent; //Str8Pair
 	
+	u64 nextHistoryId;
 	VarArray history; //HistoryItem
 	
 	ResultTab currentResultTab;

@@ -5,3 +5,4 @@ _build/
 _data/*.exe
 _data/*.dll
 _data/*.ini
+.vs/

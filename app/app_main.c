@@ -110,6 +110,13 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	ClearPointer(appData);
 	UpdateDllGlobals(inPlatformInfo, inPlatformApi, (void*)appData, nullptr);
 	
+	#if 0
+	PrintLine_D("scratch1: %p-%p", scratch->mainPntr, (u8*)scratch->mainPntr + scratch->size);
+	PrintLine_D("scratch2: %p-%p", scratch2->mainPntr, (u8*)scratch2->mainPntr + scratch2->size);
+	PrintLine_D("scratch3: %p-%p", scratch3->mainPntr, (u8*)scratch3->mainPntr + scratch3->size);
+	PrintLine_D("appData: %p-%p", appData, (appData + 1));
+	#endif
+	
 	InitAppResources(&app->resources);
 	
 	#if BUILD_WITH_SOKOL_APP
@@ -130,6 +137,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	
 	InitClayUIRenderer(stdHeap, V2_Zero, &app->clay);
 	app->clayUiFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE);
+	app->clayUiBoldFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE|FontStyleFlag_Bold);
 	
 	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://www.kagi.com/"), &app->urlTextbox);
 	InitUiListView(stdHeap, StrLit("HeadersListView"), &app->headersListView);
@@ -138,10 +146,12 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	InitUiListView(stdHeap, StrLit("ContentListView"), &app->contentListView);
 	InitUiTextbox(stdHeap, StrLit("ContentKeyTextbox"), StrLit(""), &app->contentKeyTextbox);
 	InitUiTextbox(stdHeap, StrLit("ContentValueTextbox"), StrLit(""), &app->contentValueTextbox);
+	InitUiListView(stdHeap, StrLit("HistoryListView"), &app->historyListView);
 	
 	InitVarArray(Str8Pair, &app->httpHeaders, stdHeap);
 	InitVarArray(Str8Pair, &app->httpContent, stdHeap);
 	InitVarArray(HistoryItem, &app->history, stdHeap);
+	app->nextHistoryId = 1;
 	
 	app->httpVerb = HttpVerb_POST;
 	app->currentResultTab = ResultTab_Raw;
@@ -163,7 +173,7 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHeaderItem)
 	Str8Pair* header = (Str8Pair*)((UiListViewItem*)item)->contextPntr;
 	if (app->removedHeaderThisFrame) { header--; }
 	CLAY_TEXT(
-		PrintInArenaStr(uiArena, "%.*s=%.*s", StrPrint(header->key), StrPrint(header->value)),
+		PrintInArenaStr(uiArena, "%.*s: %.*s", StrPrint(header->key), StrPrint(header->value)),
 		CLAY_TEXT_CONFIG({
 			.fontId = app->clayUiFontId,
 			.fontSize = (u16)app->uiFontSize,
@@ -258,6 +268,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	// +==============================+
 	TracyCZoneN(Zone_Update, "Update", true);
 	{
+		// +==================================+
+		// | Handle Ctrl+Plus/Minus/0/Scroll  |
+		// +==================================+
 		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Plus) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
 			AppChangeFontSize(true);
@@ -266,6 +279,21 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		{
 			AppChangeFontSize(false);
 		}
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_0) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		{
+			app->uiFontSize = DEFAULT_UI_FONT_SIZE;
+			app->uiScale = 1.0f;
+			bool fontBakeSuccess = AppCreateFonts();
+			Assert(fontBakeSuccess);
+		}
+		if (IsKeyboardKeyDown(&appIn->keyboard, Key_Control) && appIn->mouse.scrollDelta.Y != 0)
+		{
+			AppChangeFontSize(appIn->mouse.scrollDelta.Y > 0);
+		}
+		
+		// +===============================+
+		// | Ctrl+Tilde Toggles Clay Debug |
+		// +===============================+
 		#if DEBUG_BUILD
 		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tilde) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
@@ -312,22 +340,29 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Enter))
 		{
-			if (app->focusedTextbox == &app->headerKeyTextbox || app->focusedTextbox == &app->headerValueTextbox)
+			if (IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 			{
-				addHeader = true;
-				if (app->focusedTextbox->text.length > 0)
-				{
-					if (app->focusedTextbox == &app->headerValueTextbox) { app->focusedTextbox = &app->headerKeyTextbox; }
-					else { app->focusedTextbox = &app->headerValueTextbox; }
-				}
+				makeRequest = true;
 			}
-			if (app->focusedTextbox == &app->contentKeyTextbox || app->focusedTextbox == &app->contentValueTextbox)
+			else
 			{
-				addContent = true;
-				if (app->focusedTextbox->text.length > 0)
+				if (app->focusedTextbox == &app->headerKeyTextbox || app->focusedTextbox == &app->headerValueTextbox)
 				{
-					if (app->focusedTextbox == &app->contentValueTextbox) { app->focusedTextbox = &app->contentKeyTextbox; }
-					else { app->focusedTextbox = &app->contentValueTextbox; }
+					addHeader = true;
+					if (app->focusedTextbox->text.length > 0)
+					{
+						if (app->focusedTextbox == &app->headerValueTextbox) { app->focusedTextbox = &app->headerKeyTextbox; }
+						else { app->focusedTextbox = &app->headerValueTextbox; }
+					}
+				}
+				if (app->focusedTextbox == &app->contentKeyTextbox || app->focusedTextbox == &app->contentValueTextbox)
+				{
+					addContent = true;
+					if (app->focusedTextbox->text.length > 0)
+					{
+						if (app->focusedTextbox == &app->contentValueTextbox) { app->focusedTextbox = &app->contentKeyTextbox; }
+						else { app->focusedTextbox = &app->contentValueTextbox; }
+					}
 				}
 			}
 		}
@@ -390,7 +425,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				CLAY_TEXT(
 					StrLit("URL:"),
 					CLAY_TEXT_CONFIG({
-						.fontId = app->clayUiFontId,
+						.fontId = app->clayUiBoldFontId,
 						.fontSize = (u16)app->uiFontSize,
 						.textColor = MonokaiWhite,
 						.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -424,7 +459,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					CLAY_TEXT(
 						StrLit("Headers:"),
 						CLAY_TEXT_CONFIG({
-							.fontId = app->clayUiFontId,
+							.fontId = app->clayUiBoldFontId,
 							.fontSize = (u16)app->uiFontSize,
 							.textColor = MonokaiWhite,
 							.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -441,6 +476,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							{
 								VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
 								UiListViewItem* item = &headerListItems[hIndex];
+								ClearPointer(item);
 								item->idStr = AllocStr8(scratch, header->key);
 								item->render = RenderHeaderItem;
 								item->contextPntr = (void*)header;
@@ -449,9 +485,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						app->headersListView.contextPntr = (void*)&app->httpHeaders;
 						app->removedHeaderThisFrame = false;
 						DoUiListView(&app->headersListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-							CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-							app->httpHeaders.length, headerListItems,
-							nullptr, 0x00, 0, app->uiScale);
+							app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							app->httpHeaders.length, headerListItems);
 						
 						if (app->headersListView.selectionChanged)
 						{
@@ -485,7 +520,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							CLAY_TEXT(
 								StrLit("Key:"),
 								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
+									.fontId = app->clayUiBoldFontId,
 									.fontSize = (u16)app->uiFontSize,
 									.textColor = MonokaiWhite,
 									.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -505,7 +540,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							CLAY_TEXT(
 								StrLit("Value:"),
 								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
+									.fontId = app->clayUiBoldFontId,
 									.fontSize = (u16)app->uiFontSize,
 									.textColor = MonokaiWhite,
 									.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -545,7 +580,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					CLAY_TEXT(
 						StrLit("Content:"),
 						CLAY_TEXT_CONFIG({
-							.fontId = app->clayUiFontId,
+							.fontId = app->clayUiBoldFontId,
 							.fontSize = (u16)app->uiFontSize,
 							.textColor = MonokaiWhite,
 							.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -562,6 +597,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							{
 								VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
 								UiListViewItem* item = &contentListItems[cIndex];
+								ClearPointer(item);
 								item->idStr = AllocStr8(scratch, contentItem->key);
 								item->render = RenderContentItem;
 								item->contextPntr = (void*)contentItem;
@@ -570,9 +606,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						app->contentListView.contextPntr = (void*)&app->httpContent;
 						app->removedContentThisFrame = false;
 						DoUiListView(&app->contentListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-							CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-							app->httpContent.length, contentListItems,
-							nullptr, 0x00, 0, app->uiScale);
+							app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							app->httpContent.length, contentListItems);
 						
 						if (app->contentListView.selectionChanged)
 						{
@@ -606,7 +641,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							CLAY_TEXT(
 								StrLit("Key:"),
 								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
+									.fontId = app->clayUiBoldFontId,
 									.fontSize = (u16)app->uiFontSize,
 									.textColor = MonokaiWhite,
 									.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -626,7 +661,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							CLAY_TEXT(
 								StrLit("Value:"),
 								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiFontId,
+									.fontId = app->clayUiBoldFontId,
 									.fontSize = (u16)app->uiFontSize,
 									.textColor = MonokaiWhite,
 									.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -678,6 +713,38 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				} Clay__CloseElement();
 			}
 			
+			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(4)) } } }) {}
+			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(1)) } }, .backgroundColor = MonokaiGray1 })
+			{
+				CLAY({
+					.layout = {
+						.sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+						.padding = { .left = UI_U16(8), .right = UI_U16(8) },
+						.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+					},
+					.floating = {
+						.attachTo = CLAY_ATTACH_TO_PARENT,
+						.attachPoints = {
+							.parent = CLAY_ATTACH_POINT_CENTER_CENTER,
+							.element = CLAY_ATTACH_POINT_CENTER_CENTER,
+						},
+					},
+					.backgroundColor = MonokaiBack,
+				})
+				{
+					CLAY_TEXT(
+						StrLit("Result"),
+						CLAY_TEXT_CONFIG({
+							.fontId = app->clayUiBoldFontId,
+							.fontSize = (u16)app->uiFontSize,
+							.textColor = MonokaiGray1,
+							.wrapMode = CLAY_TEXT_WRAP_NONE,
+							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+					}));
+				}
+			}
+			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(8)) } } }) {}
+			
 			// +==============================+
 			// |          Result Row          |
 			// +==============================+
@@ -692,31 +759,27 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				// +==============================+
 				// |         History List         |
 				// +==============================+
-				CLAY({ .id = CLAY_ID("HistoryScrollContainer"),
-					.layout = {
-						.sizing = { .width = CLAY_SIZING_PERCENT(0.20f), .height = CLAY_SIZING_GROW(0) },
-						.layoutDirection = CLAY_TOP_TO_BOTTOM,
-					},
-					.scroll = { .vertical = true },
-					.backgroundColor = MonokaiDarkGray,
-					.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(1)), .color = MonokaiWhite },
-				})
+				UiListViewItem* historyListItems = nullptr;
+				if (app->history.length > 0)
 				{
+					historyListItems = AllocArray(UiListViewItem, scratch, app->history.length);
+					NotNull(historyListItems);
 					for (uxx hIndex = app->history.length; hIndex > 0; hIndex--)
 					{
-						VarArrayLoopGet(HistoryItem, item, &app->history, hIndex-1);
-						CLAY_TEXT(
-							AllocStr8(uiArena, item->url),
-							CLAY_TEXT_CONFIG({
-								.fontId = app->clayUiFontId,
-								.fontSize = (u16)app->uiFontSize,
-								.textColor = MonokaiWhite,
-								.wrapMode = CLAY_TEXT_WRAP_NONE,
-								.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
-								.userData = { .contraction = TextContraction_EllipseLeft },
-						}));
+						VarArrayLoopGet(HistoryItem, historyItem, &app->history, hIndex-1);
+						UiListViewItem* item = &historyListItems[app->history.length - hIndex];
+						ClearPointer(item);
+						item->idStr = PrintInArenaStr(uiArena, "History%llu", historyItem->id);
+						item->displayStr = AllocStr8(uiArena, historyItem->url);
+						item->font = &app->uiFont;
+						item->fontStyle = UI_FONT_STYLE;
+						item->fontSize = app->uiFontSize;
+						item->contraction = TextContraction_EllipseLeft;
 					}
 				}
+				DoUiListView(&app->historyListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+					app->uiScale, CLAY_SIZING_PERCENT(0.20f), CLAY_SIZING_GROW(0), 0,
+					app->history.length, historyListItems);
 				
 				// +==============================+
 				// |        Result TabView        |
@@ -733,7 +796,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						for (uxx tIndex = 1; tIndex < ResultTab_Count; tIndex++)
 						{
 							ResultTab tab = (ResultTab)tIndex;
-							ClayId tabId = ToClayIdPrint("%sTab", GetResultTabStr(tab));
+							ClayId tabId = ToClayIdPrint(uiArena, "%sTab", GetResultTabStr(tab));
 							bool isHovered = IsMouseOverClay(tabId);
 							
 							if (isHovered && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left))
@@ -744,7 +807,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							CLAY({ .id = tabId,
 								.layout = {
 									.sizing = { .width = CLAY_SIZING_FIT(30, 0) },
-									.padding = CLAY_PADDING_ALL(UI_U16(4)),
+									.padding = { .left = UI_U16(12), .right = UI_U16(12), .top = UI_U16(4), .bottom = UI_U16(4) },
 									.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
 								},
 								.backgroundColor = (app->currentResultTab == tab) ? MonokaiDarkGray : (isHovered ? MonokaiGray2 : MonokaiBack),
@@ -754,7 +817,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 								CLAY_TEXT(
 									StrLit(GetResultTabStr(tab)),
 									CLAY_TEXT_CONFIG({
-										.fontId = app->clayUiFontId,
+										.fontId = app->clayUiBoldFontId,
 										.fontSize = (u16)app->uiFontSize,
 										.textColor = MonokaiWhite,
 										.wrapMode = CLAY_TEXT_WRAP_NONE,
@@ -868,6 +931,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		NotNull(historyItem);
 		ClearPointer(historyItem);
 		historyItem->arena = stdHeap;
+		historyItem->id = app->nextHistoryId;
+		app->nextHistoryId++;
 		historyItem->url = AllocStr8(stdHeap, app->urlTextbox.text);
 		historyItem->verb = app->httpVerb;
 		if (app->httpHeaders.length > 0)

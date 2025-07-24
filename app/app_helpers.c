@@ -65,6 +65,7 @@ bool AppCreateFonts()
 		Result attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE);
 		Assert(attachResult == Result_Success);
 		UNUSED(attachResult);
+		
 		Result bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
 		if (bakeResult != Result_Success)
 		{
@@ -78,6 +79,24 @@ bool AppCreateFonts()
 		}
 		Assert(bakeResult == Result_Success);
 		FillFontKerningTable(&newUiFont);
+		RemoveAttachedTtfFile(&newUiFont);
+		
+		attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold);
+		Assert(attachResult == Result_Success);
+		UNUSED(attachResult);
+		bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
+		if (bakeResult != Result_Success)
+		{
+			bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, NewV2i(512, 512), ArrayCount(fontCharRanges), &fontCharRanges[0]);
+			if (bakeResult != Result_Success)
+			{
+				RemoveAttachedTtfFile(&newUiFont);
+				FreeFont(&newUiFont);
+				return false;
+			}
+		}
+		Assert(bakeResult == Result_Success);
+		
 		RemoveAttachedTtfFile(&newUiFont);
 	}
 	
@@ -130,9 +149,8 @@ bool AppChangeFontSize(bool increase)
 //Call Clay__CloseElement once after if statement
 bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
-	ScratchBegin(scratch);
-	Str8 fullIdStr = PrintInArenaStr(scratch, "%.*s_Btn", StrPrint(idStr));
-	Str8 hotkeyIdStr = PrintInArenaStr(scratch, "%.*s_Hotkey", StrPrint(idStr));
+	Str8 fullIdStr = PrintInArenaStr(uiArena, "Btn_%.*s", StrPrint(idStr));
+	Str8 hotkeyIdStr = PrintInArenaStr(uiArena, "Btn_%.*s_Hotkey", StrPrint(idStr));
 	ClayId btnId = ToClayId(fullIdStr);
 	ClayId hotkeyId = ToClayId(hotkeyIdStr);
 	bool isHovered = IsMouseOverClay(btnId);
@@ -166,11 +184,11 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 			CLAY_ICON(icon, FillV2(16 * app->uiScale), MonokaiWhite);
 		}
 		CLAY_TEXT(
-			btnText,
+			PrintInArenaStr(uiArena, "%.*s", StrPrint(btnText)),
 			CLAY_TEXT_CONFIG({
-				.fontId = app->clayUiFontId,
+				.fontId = app->clayUiBoldFontId,
 				.fontSize = (u16)app->uiFontSize,
-				.textColor = MonokaiWhite,
+				.textColor = (isEnabled && (isHovered || isPressed)) ? MonokaiDarkGray : MonokaiWhite,
 				.wrapMode = CLAY_TEXT_WRAP_NONE,
 				.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
 				.userData = { .contraction = TextContraction_ClipRight },
@@ -203,7 +221,6 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 			}
 		}
 	}
-	ScratchEnd(scratch);
 	return (isHovered && isEnabled && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left));
 }
 bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, r32 growWidth, Texture* icon)
