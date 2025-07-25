@@ -134,6 +134,10 @@ bool PlatDoUpdate(void)
 	bool renderedFrame = true;
 	//TODO: Check for dll changes, reload it!
 	
+	#if BUILD_WITH_HTTP
+	OsUpdateHttpRequestManager(&platformData->http, platformData->currentAppInput->programTime);
+	#endif
+	
 	//Swap which appInput is being written to and pass the static version to the application
 	AppInput* oldAppInput = platformData->currentAppInput;
 	AppInput* newAppInput = (platformData->currentAppInput == &platformData->appInputs[0]) ? &platformData->appInputs[1] : &platformData->appInputs[0];
@@ -170,6 +174,10 @@ bool PlatDoUpdate(void)
 	platformData->currentAppInput = newAppInput;
 	
 	renderedFrame = platformData->appApi.AppUpdate(platformInfo, platform, platformData->appMemoryPntr, oldAppInput);
+	
+	#if BUILD_WITH_HTTP
+	OsUpdateHttpRequestManager(&platformData->http, platformData->currentAppInput->programTime);
+	#endif
 	
 	TracyCZoneEnd(Zone_Func);
 	return renderedFrame;
@@ -218,6 +226,11 @@ int main()
 	ClearPointer(platformInfo);
 	platformInfo->platformStdHeap = stdHeap;
 	platformInfo->platformStdHeapAllowFreeWithoutSize = &platformData->stdHeapAllowFreeWithoutSize;
+	
+	#if BUILD_WITH_HTTP
+	OsInitHttpRequestManager(stdHeap, &platformData->http);
+	platformInfo->http = &platformData->http;
+	#endif
 	
 	platform = AllocType(PlatformApi, stdHeap);
 	NotNull(platform);
@@ -330,6 +343,9 @@ void PlatSappCleanup(void)
 {
 	platformData->appApi.AppClosing(platformInfo, platform, platformData->appMemoryPntr);
 	ShutdownSokolGraphics();
+	#if BUILD_WITH_HTTP
+	OsFreeHttpRequestManager(&platformData->http);
+	#endif
 }
 
 void PlatSappEvent(const sapp_event* event)
@@ -406,6 +422,9 @@ sapp_desc sokol_main(int argc, char* argv[])
 {
 	UNUSED(argc);
 	UNUSED(argv);
+	#if TARGET_HAS_THREADING
+	MainThreadId = OsGetCurrentThreadId();
+	#endif
 	return (sapp_desc){
 		.init_cb = PlatSappInit,
 		.frame_cb = PlatDoUpdate,

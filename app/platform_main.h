@@ -22,6 +22,10 @@ struct PlatformData
 	AppInput appInputs[2];
 	AppInput* oldAppInput;
 	AppInput* currentAppInput;
+	
+	#if BUILD_WITH_HTTP
+	HttpRequestManager http;
+	#endif
 };
 
 #endif //  _PLATFORM_MAIN_H

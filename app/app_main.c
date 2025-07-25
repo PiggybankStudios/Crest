@@ -925,14 +925,29 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		UiTextboxClear(&app->contentKeyTextbox);
 		UiTextboxClear(&app->contentValueTextbox);
 	}
+	
+	// +==============================+
+	// |         Make Request         |
+	// +==============================+
 	if (makeRequest && canMakeRequest)
 	{
+		HttpRequestArgs args = ZEROED;
+		args.verb = app->httpVerb;
+		args.urlStr = app->urlTextbox.text;
+		args.numHeaders = app->httpHeaders.length;
+		args.headers = (Str8Pair*)app->httpHeaders.items;
+		args.numContentItems = app->httpContent.length;
+		args.contentItems = (Str8Pair*)app->httpContent.items;
+		HttpRequest* request = OsMakeHttpRequest(platformInfo->http, &args, appIn->programTime);
+		NotNull(request);
+		
 		HistoryItem* historyItem = VarArrayAdd(HistoryItem, &app->history);
 		NotNull(historyItem);
 		ClearPointer(historyItem);
 		historyItem->arena = stdHeap;
 		historyItem->id = app->nextHistoryId;
 		app->nextHistoryId++;
+		historyItem->httpId = request->id;
 		historyItem->url = AllocStr8(stdHeap, app->urlTextbox.text);
 		historyItem->verb = app->httpVerb;
 		if (app->httpHeaders.length > 0)

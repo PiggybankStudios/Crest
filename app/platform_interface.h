@@ -12,6 +12,9 @@ struct PlatformInfo
 {
 	Arena* platformStdHeap;
 	Arena* platformStdHeapAllowFreeWithoutSize;
+	#if BUILD_WITH_HTTP
+	HttpRequestManager* http;
+	#endif
 };
 
 typedef struct AppInput AppInput;

@@ -29,31 +29,12 @@ const char* GetResultTabStr(ResultTab enumValue)
 	}
 }
 
-typedef enum HttpVerb HttpVerb;
-enum HttpVerb
-{
-	HttpVerb_None = 0,
-	HttpVerb_GET,
-	HttpVerb_POST,
-	HttpVerb_DELETE,
-	HttpVerb_Count,
-};
-const char* GetHttpVerbStr(HttpVerb enumValue)
-{
-	switch (enumValue)
-	{
-		case HttpVerb_GET:    return "GET";
-		case HttpVerb_POST:   return "POST";
-		case HttpVerb_DELETE: return "DELETE";
-		default: return UNKNOWN_STR;
-	}
-}
-
 typedef plex HistoryItem HistoryItem;
 plex HistoryItem
 {
 	Arena* arena;
 	u64 id;
+	u64 httpId;
 	Str8 url;
 	HttpVerb verb;
 	uxx numHeaders;
