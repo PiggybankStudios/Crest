@@ -1,3 +1,9 @@
 #TODO List
 	[ ] .http file format "https://timdeschryver.dev/bits/http-files"
+	[ ] Free APIs "https://free-apis.github.io/#/browse"
+		[ ] "https://cataas.com/cat"
+		[ ] "https://catfact.ninja/fact"
+		[ ] "https://dogapi.dog/api/v2/facts"
+		[ ] "https://graphqlpokemon.favware.tech/v8" { "query": "{ getPokemon(pokemon: dragonite) { sprite num species color } }" }
+		[ ] "https://http.cat/404"
 	[ ] 

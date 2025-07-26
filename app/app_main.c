@@ -52,7 +52,6 @@ static Arena* stdHeap = nullptr;
 // +--------------------------------------------------------------+
 #include "app_resources.c"
 #include "app_helpers.c"
-//TODO: Add source files here!
 
 // +==============================+
 // |           DllMain            |
