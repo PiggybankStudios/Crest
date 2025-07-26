@@ -234,6 +234,36 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
 }
 
 // +==============================+
+// |         HttpCallback         |
+// +==============================+
+// void HttpCallback(plex HttpRequest* request)
+HTTP_CALLBACK_DEF(HttpCallback)
+{
+	NotNull(request);
+	HistoryItem* history = nullptr;
+	uxx historyIndex = 0;
+	VarArrayLoop(&app->history, hIndex)
+	{
+		VarArrayLoopGet(HistoryItem, historyItem, &app->history, hIndex);
+		if (historyItem->id == request->args.contextId) { history = historyItem; historyIndex = hIndex; break; }
+	}
+	if (history == nullptr) { PrintLine_W("Couldn't find history item with ID %llu", request->args.contextId); return; }
+	Assert(!history->finished);
+	
+	PrintLine_D("Callback for history %llu: %s \"%.*s\" result=%s, got %llu byte%s",
+		history->id,
+		GetHttpVerbStr(history->verb),
+		StrPrint(history->url),
+		GetHttpRequestStateStr(request->state),
+		request->responseBytes.length, Plural(request->responseBytes.length, "s")
+	);
+	history->finished = true;
+	Str8 responseStr = NewStr8(request->responseBytes.length, (char*)request->responseBytes.items);
+	NotNullStr(responseStr);
+	history->response = AllocStr8(history->arena, responseStr);
+}
+
+// +==============================+
 // |          AppUpdate           |
 // +==============================+
 // bool AppUpdate(PlatformInfo* inPlatformInfo, PlatformApi* inPlatformApi, void* memoryPntr, AppInput* appInput)
@@ -833,23 +863,89 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						.layout = {
 							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
 							.padding = CLAY_PADDING_ALL(UI_BORDER(2)),
+							.layoutDirection = CLAY_TOP_TO_BOTTOM,
 						},
 						.backgroundColor = MonokaiDarkGray,
+						.scroll = { .vertical=true, .scrollLag=5 },
 					})
 					{
 						switch (app->currentResultTab)
 						{
+							// +==============================+
+							// |          Raw Result          |
+							// +==============================+
 							case ResultTab_Raw:
 							{
-								CLAY_TEXT(
-									StrLit("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
-									CLAY_TEXT_CONFIG({
-										.fontId = app->clayUiFontId,
-										.fontSize = (u16)app->uiFontSize,
-										.textColor = MonokaiWhite,
-										.wrapMode = CLAY_TEXT_WRAP_WORDS,
-										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-								}));
+								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+								{
+									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
+									if (selectedHistory->finished)
+									{
+										if (selectedHistory->response.length > 0)
+										{
+											Str8 rawStrSlice = StrSlice(selectedHistory->response, 0, MinUXX(2048, selectedHistory->response.length));
+											CLAY_TEXT(
+												rawStrSlice,
+												CLAY_TEXT_CONFIG({
+													.fontId = app->clayUiFontId,
+													.fontSize = (u16)app->uiFontSize,
+													.textColor = MonokaiWhite,
+													.wrapMode = CLAY_TEXT_WRAP_WORDS,
+													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											}));
+											
+											if (selectedHistory->response.length > 2048)
+											{
+												CLAY({ .layout = { .sizing = { .height = UI_R32(16) } } }) {}
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "[Truncated %llu bytes more]", selectedHistory->response.length - 2048),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiGray1,
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+										}
+										else
+										{
+											CLAY_TEXT(
+												StrLit("[Empty]"),
+												CLAY_TEXT_CONFIG({
+													.fontId = app->clayUiFontId,
+													.fontSize = (u16)app->uiFontSize,
+													.textColor = MonokaiGray1,
+													.wrapMode = CLAY_TEXT_WRAP_WORDS,
+													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											}));
+										}
+									}
+									else
+									{
+										CLAY_TEXT(
+											StrLit("[In progress...]"),
+											CLAY_TEXT_CONFIG({
+												.fontId = app->clayUiFontId,
+												.fontSize = (u16)app->uiFontSize,
+												.textColor = MonokaiGray1,
+												.wrapMode = CLAY_TEXT_WRAP_WORDS,
+												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+										}));
+									}
+								}
+								else
+								{
+									CLAY_TEXT(
+										StrLit("[Nothing selected]"),
+										CLAY_TEXT_CONFIG({
+											.fontId = app->clayUiFontId,
+											.fontSize = (u16)app->uiFontSize,
+											.textColor = MonokaiGray1,
+											.wrapMode = CLAY_TEXT_WRAP_WORDS,
+											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+									}));
+								}
 							} break;
 							
 							default: 
@@ -859,7 +955,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 									CLAY_TEXT_CONFIG({
 										.fontId = app->clayUiFontId,
 										.fontSize = (u16)app->uiFontSize,
-										.textColor = MonokaiWhite,
+										.textColor = MonokaiOrange,
 										.wrapMode = CLAY_TEXT_WRAP_WORDS,
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
@@ -930,6 +1026,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	// +==============================+
 	if (makeRequest && canMakeRequest)
 	{
+		uxx historyId = app->nextHistoryId;
+		app->nextHistoryId++;
+		
 		HttpRequestArgs args = ZEROED;
 		args.verb = app->httpVerb;
 		args.urlStr = app->urlTextbox.text;
@@ -937,6 +1036,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		args.headers = (Str8Pair*)app->httpHeaders.items;
 		args.numContentItems = app->httpContent.length;
 		args.contentItems = (Str8Pair*)app->httpContent.items;
+		args.callback = HttpCallback;
+		args.contextId = historyId;
 		HttpRequest* request = OsMakeHttpRequest(platformInfo->http, &args, appIn->programTime);
 		NotNull(request);
 		
@@ -944,8 +1045,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		NotNull(historyItem);
 		ClearPointer(historyItem);
 		historyItem->arena = stdHeap;
-		historyItem->id = app->nextHistoryId;
-		app->nextHistoryId++;
+		historyItem->id = historyId;
 		historyItem->httpId = request->id;
 		historyItem->url = AllocStr8(stdHeap, app->urlTextbox.text);
 		historyItem->verb = app->httpVerb;
@@ -973,6 +1073,10 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				historyItem->contentItems[hIndex].value = AllocStr8(stdHeap, entry->value);
 			}
 		}
+		
+		app->historyListView.selectionActive = true;
+		FreeStr8(app->historyListView.arena, &app->historyListView.selectedIdStr);
+		app->historyListView.selectedIdStr = PrintInArenaStr(app->historyListView.arena, "History%llu", historyItem->id);
 	}
 	
 	ScratchEnd(scratch);

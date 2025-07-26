@@ -41,6 +41,9 @@ plex HistoryItem
 	Str8Pair* headers;
 	uxx numContentItems;
 	Str8Pair* contentItems;
+	
+	bool finished;
+	Str8 response;
 };
 
 typedef struct AppData AppData;

@@ -64,10 +64,10 @@ Description:
 #define BUILD_PHYSX_OBJ 0
 
 // Builds dll_main.c into pig_core.dll and pig_core.lib
-#define BUILD_PIG_CORE_DLL            1
+#define BUILD_PIG_CORE_DLL            0
 
 // Compiles app/platform_main.c to %PROJECT_EXE_NAME%.exe
-#define BUILD_APP_EXE  1
+#define BUILD_APP_EXE  0
 // Compiles app/app_main.c to %PROJECT_DLL_NAME%.dll
 #define BUILD_APP_DLL  1
 // Runs the %PROJECT_EXE_NAME%.exe
