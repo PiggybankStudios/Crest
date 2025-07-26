@@ -178,6 +178,7 @@
 		],
 		"custom_functions":
 		[
+			"#define AlignOffset(pntr, alignment)",
 			"#define AllocArray(type, arenaPntr, count)",
 			"#define AllocType(type, arenaPntr)",
 			"#define Billion(value)",
@@ -185,6 +186,7 @@
 			"#define FreeType(type, arenaPntr, allocPntr)",
 			"#define InitVarArray(type, arrayPntr, arena)",
 			"#define InitVarArrayWithInitial(type, arrayPntr, arena, initialCountNeeded)",
+			"#define IsAlignedTo(pntr, alignment)",
 			"#define Million(value)",
 			"#define Thousand(value)",
 			"#define Trillion(value)",
@@ -248,6 +250,7 @@
 			"void UiTextboxSelectAll(UiTextbox* tbox)",
 			"void UnlockMutex(Mutex* mutexPntr)",
 			"void WinHttpStatusCallback(HINTERNET handle, DWORD_PTR context, DWORD status, LPVOID infoPntr, DWORD infoLength)",
+			"void* ReallocMemAligned(Arena* arena, void* allocPntr, uxx oldSize, uxx oldAlignmentOverride, uxx newSize, uxx newAlignmentOverride)",
 		],
 		"custom_globals":
 		[
