@@ -25,7 +25,7 @@ Description:
 // The .exe will use the resources_zip.h/c file instead of loading resources from disk
 #define USE_BUNDLED_RESOURCES   0
 // Enables linking with tracy.lib to enable profiling through Tracy
-#define PROFILING_ENABLED       0
+#define PROFILING_ENABLED       1
 
 
 // Build .exe binaries for Windows platform
@@ -64,10 +64,10 @@ Description:
 #define BUILD_PHYSX_OBJ 0
 
 // Builds dll_main.c into pig_core.dll and pig_core.lib
-#define BUILD_PIG_CORE_DLL            0
+#define BUILD_PIG_CORE_DLL            1
 
 // Compiles app/platform_main.c to %PROJECT_EXE_NAME%.exe
-#define BUILD_APP_EXE  0
+#define BUILD_APP_EXE  1
 // Compiles app/app_main.c to %PROJECT_DLL_NAME%.dll
 #define BUILD_APP_DLL  1
 // Runs the %PROJECT_EXE_NAME%.exe

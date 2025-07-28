@@ -134,6 +134,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	Assert(fontBakeSuccess);
 	UNUSED(fontBakeSuccess);
 	
+	Clay_SetMaxMeasureTextCacheWordCount(Kilo(64));
 	InitClayUIRenderer(stdHeap, V2_Zero, &app->clay);
 	app->clayUiFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE);
 	app->clayUiBoldFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE|FontStyleFlag_Bold);
@@ -420,7 +421,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		uxx uiArenaMark = ArenaGetMark(uiArena);
 		
 		v2 scrollContainerInput = IsKeyboardKeyDown(&appIn->keyboard, Key_Control) ? V2_Zero : appIn->mouse.scrollDelta;
+		TracyCZoneN(Zone_UpdateScrolling, "UpdateScrolling", true);
 		UpdateClayScrolling(&app->clay.clay, 16.6f, false, scrollContainerInput, false);
+		TracyCZoneEnd(Zone_UpdateScrolling);
 		BeginClayUIRender(&app->clay.clay, screenSize, false, mousePos, IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
 		
 		FontAtlas* uiFontAtlas = GetFontAtlas(&app->uiFont, app->uiFontSize, UI_FONT_STYLE);
@@ -430,6 +433,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		// |          Render UI           |
 		// +==============================+
+		TracyCZoneN(Zone_UI, "UI", true);
 		CLAY({ .id = CLAY_ID("FullscreenContainer"),
 			.layout = {
 				.layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -883,7 +887,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 									{
 										if (selectedHistory->response.length > 0)
 										{
-											Str8 rawStrSlice = StrSlice(selectedHistory->response, 0, MinUXX(2048, selectedHistory->response.length));
+											Str8 rawStrSlice = selectedHistory->response; //StrSlice(selectedHistory->response, 0, MinUXX(2048, selectedHistory->response.length));
 											CLAY_TEXT(
 												rawStrSlice,
 												CLAY_TEXT_CONFIG({
@@ -894,19 +898,19 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 											}));
 											
-											if (selectedHistory->response.length > 2048)
-											{
-												CLAY({ .layout = { .sizing = { .height = UI_R32(16) } } }) {}
-												CLAY_TEXT(
-													PrintInArenaStr(uiArena, "[Truncated %llu bytes more]", selectedHistory->response.length - 2048),
-													CLAY_TEXT_CONFIG({
-														.fontId = app->clayUiFontId,
-														.fontSize = (u16)app->uiFontSize,
-														.textColor = MonokaiGray1,
-														.wrapMode = CLAY_TEXT_WRAP_WORDS,
-														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-												}));
-											}
+											// if (selectedHistory->response.length > 2048)
+											// {
+											// 	CLAY({ .layout = { .sizing = { .height = UI_R32(16) } } }) {}
+											// 	CLAY_TEXT(
+											// 		PrintInArenaStr(uiArena, "[Truncated %llu bytes more]", selectedHistory->response.length - 2048),
+											// 		CLAY_TEXT_CONFIG({
+											// 			.fontId = app->clayUiFontId,
+											// 			.fontSize = (u16)app->uiFontSize,
+											// 			.textColor = MonokaiGray1,
+											// 			.wrapMode = CLAY_TEXT_WRAP_WORDS,
+											// 			.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											// 	}));
+											// }
 										}
 										else
 										{
@@ -965,10 +969,14 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				}
 			}
 		}
+		TracyCZoneEnd(Zone_UI);
 		
-		
+		TracyCZoneN(Zone_EndRender, "EndRender", true);
 		Clay_RenderCommandArray clayRenderCommands = EndClayUIRender(&app->clay.clay);
+		TracyCZoneEnd(Zone_EndRender);
+		TracyCZoneN(Zone_RenderCommands, "RenderCommands", true);
 		RenderClayCommandArray(&app->clay, &gfx, &clayRenderCommands);
+		TracyCZoneEnd(Zone_RenderCommands);
 		FlagUnset(uiArena->flags, ArenaFlag_DontPop);
 		ArenaResetToMark(uiArena, uiArenaMark);
 		uiArena = nullptr;
