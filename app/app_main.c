@@ -148,6 +148,8 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	InitUiTextbox(stdHeap, StrLit("ContentValueTextbox"), StrLit(""), &app->contentValueTextbox);
 	InitUiListView(stdHeap, StrLit("HistoryListView"), &app->historyListView);
 	
+	InitUiLargeTextView(stdHeap, StrLit("ResponseTextView"), &app->responseTextView);
+	
 	InitVarArray(Str8Pair, &app->httpHeaders, stdHeap);
 	InitVarArray(Str8Pair, &app->httpContent, stdHeap);
 	InitVarArray(HistoryItem, &app->history, stdHeap);
@@ -262,6 +264,7 @@ HTTP_CALLBACK_DEF(HttpCallback)
 	Str8 responseStr = NewStr8(request->responseBytes.length, (char*)request->responseBytes.items);
 	NotNullStr(responseStr);
 	history->response = AllocStr8(history->arena, responseStr);
+	InitUiLargeText(stdHeap, history->response, &history->responseLargeText);
 }
 
 // +==============================+
@@ -880,6 +883,60 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							// +==============================+
 							case ResultTab_Raw:
 							{
+								#if 1
+								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+								{
+									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
+									if (selectedHistory->finished)
+									{
+										if (selectedHistory->response.length > 0)
+										{
+											DoUiLargeTextView(&app->responseTextView, &app->clay, uiArena, 
+												&appIn->keyboard, &appIn->mouse,
+												app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
+												&selectedHistory->responseLargeText,
+												&app->uiFont, app->uiFontSize, UI_FONT_STYLE
+											);
+										}
+										else
+										{
+											CLAY_TEXT(
+												StrLit("[Empty]"),
+												CLAY_TEXT_CONFIG({
+													.fontId = app->clayUiFontId,
+													.fontSize = (u16)app->uiFontSize,
+													.textColor = MonokaiGray1,
+													.wrapMode = CLAY_TEXT_WRAP_WORDS,
+													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											}));
+										}
+									}
+									else
+									{
+										CLAY_TEXT(
+											StrLit("[In progress...]"),
+											CLAY_TEXT_CONFIG({
+												.fontId = app->clayUiFontId,
+												.fontSize = (u16)app->uiFontSize,
+												.textColor = MonokaiGray1,
+												.wrapMode = CLAY_TEXT_WRAP_WORDS,
+												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+										}));
+									}
+								}
+								else
+								{
+									CLAY_TEXT(
+										StrLit("[Nothing selected]"),
+										CLAY_TEXT_CONFIG({
+											.fontId = app->clayUiFontId,
+											.fontSize = (u16)app->uiFontSize,
+											.textColor = MonokaiGray1,
+											.wrapMode = CLAY_TEXT_WRAP_WORDS,
+											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+									}));
+								}
+								#else
 								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
 								{
 									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
@@ -950,6 +1007,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 									}));
 								}
+								#endif
 							} break;
 							
 							default: 

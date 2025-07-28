@@ -44,6 +44,7 @@ plex HistoryItem
 	
 	bool finished;
 	Str8 response;
+	UiLargeText responseLargeText;
 };
 
 typedef struct AppData AppData;
@@ -85,6 +86,7 @@ struct AppData
 	VarArray history; //HistoryItem
 	
 	ResultTab currentResultTab;
+	UiLargeTextView responseTextView;
 };
 
 #endif //  _APP_MAIN_H
