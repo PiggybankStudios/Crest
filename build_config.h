@@ -19,13 +19,13 @@ Description:
 // Controls whether we are making a build that we want to run with a Debugger.
 // This often sacrifices runtime speed or code size for extra debug information.
 // Debug builds often take less time to compile as well.
-#define DEBUG_BUILD  1
+#define DEBUG_BUILD  0
 // This disables hot-reloading support, the platform and game are one unit. Also PigCore gets compiled in directly rather than being used as a dynamic library
 #define BUILD_INTO_SINGLE_UNIT  0
 // The .exe will use the resources_zip.h/c file instead of loading resources from disk
 #define USE_BUNDLED_RESOURCES   0
 // Enables linking with tracy.lib to enable profiling through Tracy
-#define PROFILING_ENABLED       1
+#define PROFILING_ENABLED       0
 
 
 // Build .exe binaries for Windows platform

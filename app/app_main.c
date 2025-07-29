@@ -132,7 +132,6 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	app->uiScale = 1.0f;
 	bool fontBakeSuccess = AppCreateFonts();
 	Assert(fontBakeSuccess);
-	UNUSED(fontBakeSuccess);
 	
 	Clay_SetMaxMeasureTextCacheWordCount(Kilo(64));
 	InitClayUIRenderer(stdHeap, V2_Zero, &app->clay);
@@ -172,6 +171,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 // void RenderHeaderItem(UiListView* list, void* item, uxx index, bool isSelected, bool isHovered)
 UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHeaderItem)
 {
+	UNUSED(isHovered);
 	Str8Pair* header = (Str8Pair*)((UiListViewItem*)item)->contextPntr;
 	if (app->removedHeaderThisFrame) { header--; }
 	CLAY_TEXT(
@@ -207,6 +207,7 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHeaderItem)
 // void RenderContentItem(UiListView* list, void* item, uxx index, bool isSelected, bool isHovered)
 UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
 {
+	UNUSED(isHovered);
 	Str8Pair* contentItem = (Str8Pair*)((UiListViewItem*)item)->contextPntr;
 	if (app->removedContentThisFrame) { contentItem--; }
 	CLAY_TEXT(
@@ -281,7 +282,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	UpdateDllGlobals(inPlatformInfo, inPlatformApi, memoryPntr, appInput);
 	v2i screenSizei = appIn->screenSize;
 	v2 screenSize = ToV2Fromi(screenSizei);
-	v2 screenCenter = Div(screenSize, 2.0f);
+	// v2 screenCenter = Div(screenSize, 2.0f);
 	v2 mousePos = appIn->mouse.position;
 	
 	UiTextbox* focusableTextboxes[] = {
@@ -873,7 +874,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.layoutDirection = CLAY_TOP_TO_BOTTOM,
 						},
 						.backgroundColor = MonokaiDarkGray,
-						.scroll = { .vertical=true, .scrollLag=5 },
+						// .scroll = { .vertical=true, .scrollLag=5 },
 					})
 					{
 						switch (app->currentResultTab)

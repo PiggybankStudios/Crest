@@ -64,7 +64,6 @@ bool AppCreateFonts()
 		newUiFont = InitFont(stdHeap, StrLit("uiFont"));
 		Result attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE);
 		Assert(attachResult == Result_Success);
-		UNUSED(attachResult);
 		
 		Result bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
 		if (bakeResult != Result_Success)
@@ -83,7 +82,6 @@ bool AppCreateFonts()
 		
 		attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold);
 		Assert(attachResult == Result_Success);
-		UNUSED(attachResult);
 		bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
 		if (bakeResult != Result_Success)
 		{
@@ -158,7 +156,7 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 	Color32 backgroundColor = !isEnabled ? MonokaiBack : (isPressed ? MonokaiGray2 : (isHovered ? MonokaiGray1 : MonokaiDarkGray));
 	Color32 borderColor = isEnabled ? MonokaiWhite : MonokaiGray1;
 	Color32 textColor = (isEnabled && isHovered) ? MonokaiDarkGray : MonokaiWhite;
-	u16 borderWidth = (!isEnabled || isHovered) ? 1 : 0;
+	u16 borderWidth = (!isEnabled || (isHovered || isPressed)) ? 1 : 0;
 	Clay__OpenElement();
 	Clay__ConfigureOpenElement((Clay_ElementDeclaration){
 		.id = btnId,
@@ -188,7 +186,7 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 			CLAY_TEXT_CONFIG({
 				.fontId = app->clayUiBoldFontId,
 				.fontSize = (u16)app->uiFontSize,
-				.textColor = (isEnabled && (isHovered || isPressed)) ? MonokaiDarkGray : MonokaiWhite,
+				.textColor = textColor,
 				.wrapMode = CLAY_TEXT_WRAP_NONE,
 				.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
 				.userData = { .contraction = TextContraction_ClipRight },

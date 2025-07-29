@@ -30,6 +30,7 @@ void InitAppResources(AppResources* resources)
 //TODO: This returns a null-terminated fileContents when using OsReadFile but NOT when using ReadZipArchiveFileAtIndex. That's annoying for the calling code to handle when freeing!
 Result TryReadAppResource(AppResources* resources, Arena* arena, FilePath path, bool convertNewLines, Slice* fileContentsOut)
 {
+	UNUSED(resources);
 	TracyCZoneN(Zone_Func, "TryReadAppResource", true);
 	NotNull(resources);
 	Assert(arena != nullptr || fileContentsOut == nullptr);

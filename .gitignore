@@ -1,6 +1,6 @@
 *.sublime-workspace
 core/
-_data/resources/
+# _data/resources/
 _build/
 _data/*.exe
 _data/*.dll
