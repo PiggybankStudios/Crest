@@ -148,6 +148,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	InitUiListView(stdHeap, StrLit("HistoryListView"), &app->historyListView);
 	
 	InitUiLargeTextView(stdHeap, StrLit("ResponseTextView"), &app->responseTextView);
+	app->responseTextView.wordWrapEnabled = true;
 	
 	InitVarArray(Str8Pair, &app->httpHeaders, stdHeap);
 	InitVarArray(Str8Pair, &app->httpContent, stdHeap);
@@ -750,7 +751,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				} Clay__CloseElement();
 			}
 			
-			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(4)) } } }) {}
+			
+			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
 			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(1)) } }, .backgroundColor = MonokaiGray1 })
 			{
 				CLAY({
@@ -780,7 +782,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					}));
 				}
 			}
-			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(8)) } } }) {}
+			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
 			
 			// +==============================+
 			// |          Result Row          |
