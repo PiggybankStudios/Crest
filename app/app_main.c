@@ -870,7 +870,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					CLAY({ .id = CLAY_ID("ResultContainer"),
 						.layout = {
 							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-							.padding = CLAY_PADDING_ALL(UI_BORDER(2)),
+							// .padding = CLAY_PADDING_ALL(UI_BORDER(2)),
 							.layoutDirection = CLAY_TOP_TO_BOTTOM,
 						},
 						.backgroundColor = MonokaiDarkGray,
@@ -884,7 +884,6 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							// +==============================+
 							case ResultTab_Raw:
 							{
-								#if 1
 								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
 								{
 									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
@@ -898,77 +897,22 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 												&selectedHistory->responseLargeText,
 												&app->uiFont, app->uiFontSize, UI_FONT_STYLE
 											);
-										}
-										else
-										{
-											CLAY_TEXT(
-												StrLit("[Empty]"),
-												CLAY_TEXT_CONFIG({
-													.fontId = app->clayUiFontId,
-													.fontSize = (u16)app->uiFontSize,
-													.textColor = MonokaiGray1,
-													.wrapMode = CLAY_TEXT_WRAP_WORDS,
-													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											}));
-										}
-									}
-									else
-									{
-										CLAY_TEXT(
-											StrLit("[In progress...]"),
-											CLAY_TEXT_CONFIG({
-												.fontId = app->clayUiFontId,
-												.fontSize = (u16)app->uiFontSize,
-												.textColor = MonokaiGray1,
-												.wrapMode = CLAY_TEXT_WRAP_WORDS,
-												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-										}));
-									}
-								}
-								else
-								{
-									CLAY_TEXT(
-										StrLit("[Nothing selected]"),
-										CLAY_TEXT_CONFIG({
-											.fontId = app->clayUiFontId,
-											.fontSize = (u16)app->uiFontSize,
-											.textColor = MonokaiGray1,
-											.wrapMode = CLAY_TEXT_WRAP_WORDS,
-											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-									}));
-								}
-								#else
-								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
-								{
-									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
-									if (selectedHistory->finished)
-									{
-										if (selectedHistory->response.length > 0)
-										{
-											Str8 rawStrSlice = selectedHistory->response; //StrSlice(selectedHistory->response, 0, MinUXX(2048, selectedHistory->response.length));
-											CLAY_TEXT(
-												rawStrSlice,
-												CLAY_TEXT_CONFIG({
-													.fontId = app->clayUiFontId,
-													.fontSize = (u16)app->uiFontSize,
-													.textColor = MonokaiWhite,
-													.wrapMode = CLAY_TEXT_WRAP_WORDS,
-													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											}));
 											
-											// if (selectedHistory->response.length > 2048)
-											// {
-											// 	CLAY({ .layout = { .sizing = { .height = UI_R32(16) } } }) {}
-											// 	CLAY_TEXT(
-											// 		PrintInArenaStr(uiArena, "[Truncated %llu bytes more]", selectedHistory->response.length - 2048),
-											// 		CLAY_TEXT_CONFIG({
-											// 			.fontId = app->clayUiFontId,
-											// 			.fontSize = (u16)app->uiFontSize,
-											// 			.textColor = MonokaiGray1,
-											// 			.wrapMode = CLAY_TEXT_WRAP_WORDS,
-											// 			.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											// 	}));
-											// }
+											CLAY({
+												.layout = {
+													.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+													.layoutDirection = CLAY_LEFT_TO_RIGHT,
+													.padding = CLAY_PADDING_ALL(UI_U16(4)),
+													.childGap = UI_U16(2),
+												},
+											})
+											{
+												DoUiCheckbox(
+													StrLit("WordWrapCheckbox"), &app->responseTextView.wordWrapEnabled,
+													&app->clay, uiArena, &appIn->mouse, app->uiScale,
+													20.0f, nullptr, StrLit("Word Wrap"), Dir2_Left, &app->uiFont, app->uiFontSize, UI_FONT_STYLE
+												);
+											}
 										}
 										else
 										{
@@ -1008,7 +952,6 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 									}));
 								}
-								#endif
 							} break;
 							
 							default: 
