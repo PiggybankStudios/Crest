@@ -411,7 +411,13 @@ void PlatSappEvent(const sapp_event* event)
 			case SAPP_EVENTTYPE_QUIT_REQUESTED:    WriteLine_D("Event: QUIT_REQUESTED");    break;
 			case SAPP_EVENTTYPE_CLIPBOARD_PASTED:  WriteLine_D("Event: CLIPBOARD_PASTED");  break;
 			case SAPP_EVENTTYPE_FILES_DROPPED:     WriteLine_D("Event: FILES_DROPPED");     break;
-			default: PrintLine_D("Event: UNKNOWN(%d)", event->type); break;
+			//NOTE: I added this event type in order to update/render while the app is resized on Windows
+			case SAPP_EVENTTYPE_RESIZE_RENDER:
+			{
+				PlatDoUpdate();
+				sapp_consume_event(); //This tells Sokol backend that we actually rendered and want a frame flip
+			} break;
+			default: PrintLine_D("Unhandled Sokol Event: %d", event->type); break;
 		}
 	}
 	

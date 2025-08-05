@@ -138,7 +138,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	app->clayUiFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE);
 	app->clayUiBoldFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE|FontStyleFlag_Bold);
 	
-	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://www.kagi.com/"), &app->urlTextbox);
+	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://catfact.ninja/fact"), &app->urlTextbox);
 	InitUiListView(stdHeap, StrLit("HeadersListView"), &app->headersListView);
 	InitUiTextbox(stdHeap, StrLit("HeaderKeyTextbox"), StrLit(""), &app->headerKeyTextbox);
 	InitUiTextbox(stdHeap, StrLit("HeaderValueTextbox"), StrLit(""), &app->headerValueTextbox);
