@@ -442,7 +442,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		CLAY({ .id = CLAY_ID("FullscreenContainer"),
 			.layout = {
 				.layoutDirection = CLAY_TOP_TO_BOTTOM,
-				.sizing = { .width = CLAY_SIZING_GROW(0, screenSize.Width), .height = CLAY_SIZING_GROW(0, screenSize.Height) },
+				.sizing = { .width = CLAY_SIZING_PERCENT(1.0f), .height = CLAY_SIZING_PERCENT(1.0f) },
 				.padding = CLAY_PADDING_ALL(UI_U16(8)),
 			},
 			.backgroundColor = MonokaiBack,
@@ -478,7 +478,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			// +==============================+
 			CLAY({ .id = CLAY_ID("InputsRow"),
 				.layout = {
-					.sizing = { .width = CLAY_SIZING_FIXED(screenSize.Width), .height = CLAY_SIZING_PERCENT(0.40f) },
+					.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_PERCENT(0.40f) },
 					.childGap = UI_U16(8),
 					.layoutDirection = CLAY_LEFT_TO_RIGHT,
 				},
