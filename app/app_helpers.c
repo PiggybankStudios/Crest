@@ -221,11 +221,11 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 	}
 	return (isHovered && isEnabled && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left));
 }
-bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, r32 growWidth, Texture* icon)
+bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
 	return ClayBtnStrEx(btnText, btnText, hotkeyStr, isEnabled, growWidth, icon);
 }
-bool ClayBtn(const char* btnText, const char* hotkeyStr, bool isEnabled, r32 growWidth, Texture* icon)
+bool ClayBtn(const char* btnText, const char* hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
 	return ClayBtnStr(StrLit(btnText), StrLit(hotkeyStr), isEnabled, growWidth, icon);
 }

@@ -905,8 +905,10 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
 													.layoutDirection = CLAY_LEFT_TO_RIGHT,
 													.padding = CLAY_PADDING_ALL(UI_U16(4)),
-													.childGap = UI_U16(2),
+													.childGap = UI_U16(8),
+													.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
 												},
+												.backgroundColor = MonokaiBack,
 											})
 											{
 												DoUiCheckbox(
@@ -914,6 +916,48 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													&app->clay, uiArena, &appIn->mouse, app->uiScale,
 													20.0f, nullptr, StrLit("Word Wrap"), Dir2_Left, &app->uiFont, app->uiFontSize, UI_FONT_STYLE
 												);
+												
+												if (ClayBtnStr(StrLit("Save to File"), Str8_Empty, true, false, nullptr))
+												{
+													Str8Pair extensions[] = {
+														{ StrLit("All Files"), StrLit("*.*") },
+														{ StrLit("Text Files"), StrLit("*.txt") },
+														{ StrLit("HTML"), StrLit("*.html") },
+														{ StrLit("JSON"), StrLit("*.json") },
+													};
+													FilePath saveFilePath = FilePath_Empty;
+													Result saveResult = OsDoSaveFileDialog(ArrayCount(extensions), &extensions[0], 1, scratch, &saveFilePath);
+													if (saveResult == Result_Success)
+													{
+														PrintLine_D("Saving to \"%.*s\"...", StrPrint(saveFilePath));
+														bool writeSuccess = OsWriteFile(saveFilePath, selectedHistory->response, false);
+														Assert(writeSuccess);
+													}
+												} Clay__CloseElement();
+												
+												Str8 infoStr = PrintInArenaStr(uiArena, "%llu byte%s", selectedHistory->response.length, Plural(selectedHistory->response.length, "s"));
+												CLAY_TEXT(
+													infoStr,
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiGray1,
+														.wrapMode = CLAY_TEXT_WRAP_NONE,
+														.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+														.userData = { .contraction = TextContraction_ClipRight },
+												}));
+												
+												Str8 scrollStr = PrintInArenaStr(uiArena, "Line %llu offset %g", selectedHistory->responseLargeText.scrollLineIndex, selectedHistory->responseLargeText.scrollLineOffset);
+												CLAY_TEXT(
+													scrollStr,
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiGray2,
+														.wrapMode = CLAY_TEXT_WRAP_NONE,
+														.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+														.userData = { .contraction = TextContraction_ClipRight },
+												}));
 											}
 										}
 										else
