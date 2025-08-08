@@ -1091,6 +1091,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		args.urlStr = app->urlTextbox.text;
 		args.numHeaders = app->httpHeaders.length;
 		args.headers = (Str8Pair*)app->httpHeaders.items;
+		args.contentEncoding = MimeType_FormUrlEncoded;
 		args.numContentItems = app->httpContent.length;
 		args.contentItems = (Str8Pair*)app->httpContent.items;
 		args.callback = HttpCallback;
