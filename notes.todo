@@ -6,4 +6,5 @@
 		[ ] "https://dogapi.dog/api/v2/facts"
 		[ ] "https://graphqlpokemon.favware.tech/v8" { "query": "{ getPokemon(pokemon: dragonite) { sprite num species color } }" }
 		[ ] "https://http.cat/404"
+		[ ] "https://echo.free.beeceptor.com"
 	[ ] 
