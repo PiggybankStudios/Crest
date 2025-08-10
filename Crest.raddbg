@@ -1,6 +1,7 @@
 // raddbg 0.9.20 project file
 
 recent_file: path: "core/os/os_http.h"
+recent_file: path: "core/gfx/gfx_font_flow.h"
 recent_file: path: "core/mem/mem_arena.h"
 recent_file: path: "core/struct/struct_rich_string.h"
 recent_file: path: "core/third_party/clay/clay_private_api.c"
@@ -9,7 +10,6 @@ recent_file: path: "core/struct/struct_var_array.h"
 recent_file: path: "core/os/os_threading.h"
 recent_file: path: "core/cross/cross_mem_arena_string_and_unicode.h"
 recent_file: path: "core/gfx/gfx_clay_renderer.h"
-recent_file: path: "core/gfx/gfx_font_flow.h"
 recent_file: path: "core/std/std_basic_math.h"
 recent_file: path: "core/struct/struct_string.h"
 recent_file: path: "core/struct/struct_typed_array.h"
@@ -99,4 +99,9 @@ breakpoint:
   source_location: "core/os/os_http.h:661:1"
   hit_count: 0
   enabled: 0
+}
+watch_pin:
+{
+  expression: "state.font"
+  source_location: "core/gfx/gfx_font_flow.h:263:1"
 }

@@ -436,6 +436,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		NotNull(uiFontAtlas);
 		r32 fontHeight = uiFontAtlas->lineHeight;
 		
+		UiWidgetContext uiContext = NewUiWidgetContext(uiArena, &app->clay, &appIn->keyboard, &appIn->mouse, app->uiScale, &app->focusedTextbox);
+		
 		// +==============================+
 		// |          Render UI           |
 		// +==============================+
@@ -478,7 +480,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 					}));
 					
-					DoUiTextbox(&app->urlTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+					DoUiTextbox(&uiContext, &app->urlTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 					
 					if (app->urlTextbox.textChanged)
 					{
@@ -548,8 +550,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}
 							app->headersListView.contextPntr = (void*)&app->httpHeaders;
 							app->removedHeaderThisFrame = false;
-							DoUiListView(&app->headersListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-								app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							DoUiListView(&uiContext, &app->headersListView,
+								CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
 								app->httpHeaders.length, headerListItems);
 							
 							if (app->headersListView.selectionChanged)
@@ -591,7 +593,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
 								
-								DoUiTextbox(&app->headerKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 								if (app->headerKeyTextbox.textChanged)
 								{
 									app->headerKeyTextbox.textChanged = false;
@@ -611,7 +613,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
 								
-								DoUiTextbox(&app->headerValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 								if (app->headerValueTextbox.textChanged)
 								{
 									app->headerValueTextbox.textChanged = false;
@@ -669,8 +671,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							}
 							app->contentListView.contextPntr = (void*)&app->httpContent;
 							app->removedContentThisFrame = false;
-							DoUiListView(&app->contentListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-								app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+							DoUiListView(&uiContext, &app->contentListView,
+								CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
 								app->httpContent.length, contentListItems);
 							
 							if (app->contentListView.selectionChanged)
@@ -712,7 +714,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
 								
-								DoUiTextbox(&app->contentKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								DoUiTextbox(&uiContext, &app->contentKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 								if (app->contentKeyTextbox.textChanged)
 								{
 									app->contentKeyTextbox.textChanged = false;
@@ -732,7 +734,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
 								
-								DoUiTextbox(&app->contentValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								DoUiTextbox(&uiContext, &app->contentValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 								if (app->contentValueTextbox.textChanged)
 								{
 									app->contentValueTextbox.textChanged = false;
@@ -844,8 +846,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							item->contraction = TextContraction_EllipseLeft;
 						}
 					}
-					DoUiListView(&app->historyListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-						app->uiScale, CLAY_SIZING_PERCENT(0.20f), CLAY_SIZING_GROW(0), 0,
+					DoUiListView(&uiContext, &app->historyListView,
+						CLAY_SIZING_PERCENT(0.20f), CLAY_SIZING_GROW(0), 0,
 						app->history.length, historyListItems);
 					
 					// +==============================+
@@ -921,9 +923,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										{
 											if (selectedHistory->response.length > 0)
 											{
-												DoUiLargeTextView(&app->responseTextView, &app->clay, uiArena, 
-													&appIn->keyboard, &appIn->mouse,
-													app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
+												DoUiLargeTextView(&uiContext, &app->responseTextView,
+													CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
 													&selectedHistory->responseLargeText,
 													&app->uiFont, app->uiFontSize, UI_FONT_STYLE
 												);
@@ -939,9 +940,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													.backgroundColor = MonokaiBack,
 												})
 												{
-													DoUiCheckbox(
+													DoUiCheckbox(&uiContext,
 														StrLit("WordWrapCheckbox"), &app->responseTextView.wordWrapEnabled,
-														&app->clay, uiArena, &appIn->mouse, app->uiScale,
 														20.0f, nullptr, StrLit("Word Wrap"), Dir2_Left, &app->uiFont, app->uiFontSize, UI_FONT_STYLE
 													);
 													
@@ -1052,11 +1052,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					.padding = { .left = UI_U16(8), .right = UI_U16(8) },
 					.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
 				},
-				.backgroundColor = MonokaiMagenta,
+				.backgroundColor = MonokaiDarkGray,
 			})
 			{
 				CLAY_TEXT(
-					StrLit("This is an error!"),
+					StrLit("Status..."),
 					CLAY_TEXT_CONFIG({
 						.fontId = app->clayUiFontId,
 						.fontSize = (u16)app->uiFontSize,
