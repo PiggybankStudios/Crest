@@ -482,21 +482,65 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					
 					DoUiTextbox(&uiContext, &app->urlTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 					
+					StrRange* errors = nullptr;
+					uxx numErrors = GetUriErrors(scratch, app->urlTextbox.text, &errors);
+					
 					if (app->urlTextbox.textChanged)
 					{
 						app->urlTextbox.textChanged = false;
 						UiTextboxClearSyntaxRanges(&app->urlTextbox);
-						Str8 errorText = StrLit("error");
-						uxx searchIndex = 0;
-						while (searchIndex < app->urlTextbox.text.length)
+						app->urlTextbox.displayRedOutline = (numErrors > 0);
+						for (uxx eIndex = 0; eIndex < numErrors; eIndex++)
 						{
-							uxx errorIndex = StrFindAfter(app->urlTextbox.text, searchIndex, errorText, false);
-							if (errorIndex < app->urlTextbox.text.length)
+							StrRange* errorRange = &errors[eIndex];
+							UiTextboxAddSyntaxRange(&app->urlTextbox, errorRange->range, NewRichStrStyleChangeColor(MonokaiMagenta, false));
+						}
+					}
+					
+					if (numErrors > 0)
+					{
+						DoUiHoverableInterleaved(section, &uiContext, StrLit("UrlErrorIcon"), Dir2_Down)
+						{
+							DoUiHoverableSection(section, HoverArea)
 							{
-								UiTextboxAddSyntaxRange(&app->urlTextbox, NewRangeUXXLength(errorIndex, errorText.length), NewRichStrStyleChangeColor(MonokaiMagenta, false));
-								searchIndex = errorIndex + errorText.length;
+								CLAY({
+									.layout = {
+										.sizing = { .width = CLAY_SIZING_FIT(UI_R32(24)), .height = CLAY_SIZING_FIXED(UI_R32(24)) },
+										.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+									},
+									.border = { .width = UI_BORDER(2), .color = MonokaiMagenta },
+									.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(24/2)),
+								})
+								{
+									CLAY_TEXT(
+										StrLit("!"),
+										CLAY_TEXT_CONFIG({
+											.fontId = app->clayUiBoldFontId,
+											.fontSize = (u16)app->uiFontSize,
+											.textColor = MonokaiMagenta,
+											.wrapMode = CLAY_TEXT_WRAP_NONE,
+											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+									}));
+								}
 							}
-							else { searchIndex = app->urlTextbox.text.length; }
+							DoUiHoverableSection(section, Tooltip)
+							{
+								CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .childGap = UI_U16(4) } })
+								{
+									for (uxx eIndex = 0; eIndex < numErrors; eIndex++)
+									{
+										CLAY_TEXT(
+											errors[eIndex].str,
+											CLAY_TEXT_CONFIG({
+												.fontId = app->clayUiBoldFontId,
+												.fontSize = (u16)app->uiFontSize,
+												.textColor = MonokaiMagenta,
+												.wrapMode = CLAY_TEXT_WRAP_NONE,
+												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+										}));
+									}
+								}
+							}
 						}
 					}
 				}
