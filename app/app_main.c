@@ -307,15 +307,15 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==================================+
 		// | Handle Ctrl+Plus/Minus/0/Scroll  |
 		// +==================================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Plus) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Plus, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
 			AppChangeFontSize(true);
 		}
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Minus) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Minus, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
 			AppChangeFontSize(false);
 		}
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_0) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_0, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
 			app->uiFontSize = DEFAULT_UI_FONT_SIZE;
 			app->uiScale = 1.0f;
@@ -331,7 +331,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// | Ctrl+Tilde Toggles Clay Debug |
 		// +===============================+
 		#if DEBUG_BUILD
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tilde) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tilde, false) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 		{
 			Clay_SetDebugModeEnabled(!Clay_IsDebugModeEnabled());
 		}
@@ -340,7 +340,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		// | Tab Cycles Through Textboxes |
 		// +==============================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tab))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tab, true))
 		{
 			uxx currentFocusIndex = ArrayCount(focusableTextboxes);
 			for (uxx fIndex = 0; fIndex < ArrayCount(focusableTextboxes); fIndex++)
@@ -374,7 +374,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		// |    Handle Enter to Commit    |
 		// +==============================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Enter))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Enter, false))
 		{
 			if (IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
 			{
