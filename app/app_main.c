@@ -444,59 +444,32 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			.layout = {
 				.layoutDirection = CLAY_TOP_TO_BOTTOM,
 				.sizing = { .width = CLAY_SIZING_PERCENT(1.0f), .height = CLAY_SIZING_PERCENT(1.0f) },
-				.padding = CLAY_PADDING_ALL(UI_U16(8)),
 			},
 			.backgroundColor = MonokaiBack,
 		})
 		{
-			// +==============================+
-			// |         URL Textbox          |
-			// +==============================+
-			CLAY({ .id = CLAY_ID("UrlRow"),
+			CLAY({ .id = CLAY_ID("MainContainer"),
 				.layout = {
-					.sizing = { .width = CLAY_SIZING_GROW(0) },
-					.childGap = UI_U16(8),
-					.layoutDirection = CLAY_LEFT_TO_RIGHT,
-					.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
-				},
-			})
-			{
-				CLAY_TEXT(
-					StrLit("URL:"),
-					CLAY_TEXT_CONFIG({
-						.fontId = app->clayUiBoldFontId,
-						.fontSize = (u16)app->uiFontSize,
-						.textColor = MonokaiWhite,
-						.wrapMode = CLAY_TEXT_WRAP_NONE,
-						.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-				}));
-				
-				DoUiTextbox(&app->urlTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-			}
-			
-			// +==============================+
-			// |          Inputs Row          |
-			// +==============================+
-			CLAY({ .id = CLAY_ID("InputsRow"),
-				.layout = {
-					.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_PERCENT(0.40f) },
-					.childGap = UI_U16(8),
-					.layoutDirection = CLAY_LEFT_TO_RIGHT,
+					.layoutDirection = CLAY_TOP_TO_BOTTOM,
+					.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+					.padding = CLAY_PADDING_ALL(UI_U16(8)),
 				},
 			})
 			{
 				// +==============================+
-				// |         Headers List         |
+				// |         URL Textbox          |
 				// +==============================+
-				CLAY({ .id = CLAY_ID("HeaderCol"),
+				CLAY({ .id = CLAY_ID("UrlRow"),
 					.layout = {
-						.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
-						.layoutDirection = CLAY_TOP_TO_BOTTOM,
+						.sizing = { .width = CLAY_SIZING_GROW(0) },
+						.childGap = UI_U16(8),
+						.layoutDirection = CLAY_LEFT_TO_RIGHT,
+						.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
 					},
 				})
 				{
 					CLAY_TEXT(
-						StrLit("Headers:"),
+						StrLit("URL:"),
 						CLAY_TEXT_CONFIG({
 							.fontId = app->clayUiBoldFontId,
 							.fontSize = (u16)app->uiFontSize,
@@ -505,357 +478,111 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 					}));
 					
+					DoUiTextbox(&app->urlTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+					
+					if (app->urlTextbox.textChanged)
 					{
-						UiListViewItem* headerListItems = nullptr;
-						if (app->httpHeaders.length > 0)
+						app->urlTextbox.textChanged = false;
+						UiTextboxClearSyntaxRanges(&app->urlTextbox);
+						Str8 errorText = StrLit("error");
+						uxx searchIndex = 0;
+						while (searchIndex < app->urlTextbox.text.length)
 						{
-							headerListItems = AllocArray(UiListViewItem, scratch, app->httpHeaders.length);
-							NotNull(headerListItems);
-							VarArrayLoop(&app->httpHeaders, hIndex)
+							uxx errorIndex = StrFindAfter(app->urlTextbox.text, searchIndex, errorText, false);
+							if (errorIndex < app->urlTextbox.text.length)
 							{
-								VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
-								UiListViewItem* item = &headerListItems[hIndex];
-								ClearPointer(item);
-								item->idStr = AllocStr8(scratch, header->key);
-								item->render = RenderHeaderItem;
-								item->contextPntr = (void*)header;
+								UiTextboxAddSyntaxRange(&app->urlTextbox, NewRangeUXXLength(errorIndex, errorText.length), NewRichStrStyleChangeColor(MonokaiMagenta, false));
+								searchIndex = errorIndex + errorText.length;
 							}
+							else { searchIndex = app->urlTextbox.text.length; }
 						}
-						app->headersListView.contextPntr = (void*)&app->httpHeaders;
-						app->removedHeaderThisFrame = false;
-						DoUiListView(&app->headersListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-							app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-							app->httpHeaders.length, headerListItems);
+					}
+				}
+				
+				// +==============================+
+				// |          Inputs Row          |
+				// +==============================+
+				CLAY({ .id = CLAY_ID("InputsRow"),
+					.layout = {
+						.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_PERCENT(0.40f) },
+						.childGap = UI_U16(8),
+						.layoutDirection = CLAY_LEFT_TO_RIGHT,
+					},
+				})
+				{
+					// +==============================+
+					// |         Headers List         |
+					// +==============================+
+					CLAY({ .id = CLAY_ID("HeaderCol"),
+						.layout = {
+							.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
+							.layoutDirection = CLAY_TOP_TO_BOTTOM,
+						},
+					})
+					{
+						CLAY_TEXT(
+							StrLit("Headers:"),
+							CLAY_TEXT_CONFIG({
+								.fontId = app->clayUiBoldFontId,
+								.fontSize = (u16)app->uiFontSize,
+								.textColor = MonokaiWhite,
+								.wrapMode = CLAY_TEXT_WRAP_NONE,
+								.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+						}));
 						
-						if (app->headersListView.selectionChanged)
 						{
-							app->headersListView.selectionChanged = false;
-							if (app->headersListView.selectionActive && !app->removedHeaderThisFrame)
+							UiListViewItem* headerListItems = nullptr;
+							if (app->httpHeaders.length > 0)
 							{
-								if (!app->editedHeaderInputSinceFilled || (app->headerKeyTextbox.text.length == 0 && app->headerValueTextbox.text.length == 0))
+								headerListItems = AllocArray(UiListViewItem, scratch, app->httpHeaders.length);
+								NotNull(headerListItems);
+								VarArrayLoop(&app->httpHeaders, hIndex)
 								{
-									Str8Pair* header = VarArrayGet(Str8Pair, &app->httpHeaders, app->headersListView.selectionIndex);
-									UiTextboxSetText(&app->headerKeyTextbox, header->key);
-									UiTextboxSetText(&app->headerValueTextbox, header->value);
+									VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
+									UiListViewItem* item = &headerListItems[hIndex];
+									ClearPointer(item);
+									item->idStr = AllocStr8(scratch, header->key);
+									item->render = RenderHeaderItem;
+									item->contextPntr = (void*)header;
+								}
+							}
+							app->headersListView.contextPntr = (void*)&app->httpHeaders;
+							app->removedHeaderThisFrame = false;
+							DoUiListView(&app->headersListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+								app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+								app->httpHeaders.length, headerListItems);
+							
+							if (app->headersListView.selectionChanged)
+							{
+								app->headersListView.selectionChanged = false;
+								if (app->headersListView.selectionActive && !app->removedHeaderThisFrame)
+								{
+									if (!app->editedHeaderInputSinceFilled || (app->headerKeyTextbox.text.length == 0 && app->headerValueTextbox.text.length == 0))
+									{
+										Str8Pair* header = VarArrayGet(Str8Pair, &app->httpHeaders, app->headersListView.selectionIndex);
+										UiTextboxSetText(&app->headerKeyTextbox, header->key);
+										UiTextboxSetText(&app->headerValueTextbox, header->value);
+										app->headerKeyTextbox.textChanged = false;
+										app->headerValueTextbox.textChanged = false;
+										app->editedHeaderInputSinceFilled = false;
+									}
+								}
+								else if (!app->headersListView.selectionActive && !app->editedHeaderInputSinceFilled)
+								{
+									UiTextboxClear(&app->headerKeyTextbox);
+									UiTextboxClear(&app->headerValueTextbox);
 									app->headerKeyTextbox.textChanged = false;
 									app->headerValueTextbox.textChanged = false;
-									app->editedHeaderInputSinceFilled = false;
 								}
 							}
-							else if (!app->headersListView.selectionActive && !app->editedHeaderInputSinceFilled)
-							{
-								UiTextboxClear(&app->headerKeyTextbox);
-								UiTextboxClear(&app->headerValueTextbox);
-								app->headerKeyTextbox.textChanged = false;
-								app->headerValueTextbox.textChanged = false;
-							}
-						}
-					}
-					
-					CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-					{
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-						{
-							CLAY_TEXT(
-								StrLit("Key:"),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiBoldFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
-							
-							DoUiTextbox(&app->headerKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-							if (app->headerKeyTextbox.textChanged)
-							{
-								app->headerKeyTextbox.textChanged = false;
-								app->editedHeaderInputSinceFilled = true;
-							}
 						}
 						
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+						CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
 						{
-							CLAY_TEXT(
-								StrLit("Value:"),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiBoldFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
-							
-							DoUiTextbox(&app->headerValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-							if (app->headerValueTextbox.textChanged)
-							{
-								app->headerValueTextbox.textChanged = false;
-								app->editedHeaderInputSinceFilled = true;
-							}
-						}
-						
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) }, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER } } })
-						{
-							CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
-							
-							if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, false, nullptr))
-							{
-								addHeader = true;
-							} Clay__CloseElement();
-						}
-					}
-				}
-				
-				// +==============================+
-				// |         Content List         |
-				// +==============================+
-				CLAY({ .id = CLAY_ID("ContentCol"),
-					.layout = {
-						.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
-						.layoutDirection = CLAY_TOP_TO_BOTTOM,
-					},
-				})
-				{
-					CLAY_TEXT(
-						StrLit("Content:"),
-						CLAY_TEXT_CONFIG({
-							.fontId = app->clayUiBoldFontId,
-							.fontSize = (u16)app->uiFontSize,
-							.textColor = MonokaiWhite,
-							.wrapMode = CLAY_TEXT_WRAP_NONE,
-							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-					}));
-					
-					{
-						UiListViewItem* contentListItems = nullptr;
-						if (app->httpContent.length > 0)
-						{
-							contentListItems = AllocArray(UiListViewItem, scratch, app->httpContent.length);
-							NotNull(contentListItems);
-							VarArrayLoop(&app->httpContent, cIndex)
-							{
-								VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
-								UiListViewItem* item = &contentListItems[cIndex];
-								ClearPointer(item);
-								item->idStr = AllocStr8(scratch, contentItem->key);
-								item->render = RenderContentItem;
-								item->contextPntr = (void*)contentItem;
-							}
-						}
-						app->contentListView.contextPntr = (void*)&app->httpContent;
-						app->removedContentThisFrame = false;
-						DoUiListView(&app->contentListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-							app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-							app->httpContent.length, contentListItems);
-						
-						if (app->contentListView.selectionChanged)
-						{
-							app->contentListView.selectionChanged = false;
-							if (app->contentListView.selectionActive && !app->removedContentThisFrame)
-							{
-								if (!app->editedContentInputSinceFilled || (app->contentKeyTextbox.text.length == 0 && app->contentValueTextbox.text.length == 0))
-								{
-									Str8Pair* contentItem = VarArrayGet(Str8Pair, &app->httpContent, app->contentListView.selectionIndex);
-									UiTextboxSetText(&app->contentKeyTextbox, contentItem->key);
-									UiTextboxSetText(&app->contentValueTextbox, contentItem->value);
-									app->contentKeyTextbox.textChanged = false;
-									app->contentValueTextbox.textChanged = false;
-									app->editedContentInputSinceFilled = false;
-								}
-							}
-							else if (!app->contentListView.selectionActive && !app->editedContentInputSinceFilled)
-							{
-								UiTextboxClear(&app->contentKeyTextbox);
-								UiTextboxClear(&app->contentValueTextbox);
-								app->contentKeyTextbox.textChanged = false;
-								app->contentValueTextbox.textChanged = false;
-							}
-						}
-					}
-					
-					CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-					{
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-						{
-							CLAY_TEXT(
-								StrLit("Key:"),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiBoldFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
-							
-							DoUiTextbox(&app->contentKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-							if (app->contentKeyTextbox.textChanged)
-							{
-								app->contentKeyTextbox.textChanged = false;
-								app->editedContentInputSinceFilled = true;
-							}
-						}
-						
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-						{
-							CLAY_TEXT(
-								StrLit("Value:"),
-								CLAY_TEXT_CONFIG({
-									.fontId = app->clayUiBoldFontId,
-									.fontSize = (u16)app->uiFontSize,
-									.textColor = MonokaiWhite,
-									.wrapMode = CLAY_TEXT_WRAP_NONE,
-									.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-							}));
-							
-							DoUiTextbox(&app->contentValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-							if (app->contentValueTextbox.textChanged)
-							{
-								app->contentValueTextbox.textChanged = false;
-								app->editedContentInputSinceFilled = true;
-							}
-						}
-						
-						CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) } } })
-						{
-							CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
-							
-							if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, nullptr))
-							{
-								addContent = true;
-							} Clay__CloseElement();
-						}
-					}
-				}
-			}
-			
-			// +==============================+
-			// |          Submit Row          |
-			// +==============================+
-			CLAY({ .id = CLAY_ID("SubmitRow"),
-				.layout = {
-					.sizing = { .width = CLAY_SIZING_GROW(0), },
-					.layoutDirection = CLAY_LEFT_TO_RIGHT,
-					.padding = CLAY_PADDING_ALL(UI_U16(8)),
-					.childGap = UI_U16(8),
-				},
-			})
-			{
-				if (ClayBtn(GetHttpVerbStr(app->httpVerb), "", true, false, nullptr))
-				{
-					if (app->httpVerb+1 < HttpVerb_Count) { app->httpVerb = (HttpVerb)(app->httpVerb + 1); }
-					else { app->httpVerb = (HttpVerb)1; }
-				} Clay__CloseElement();
-				
-				if (ClayBtn("Make Request", "", canMakeRequest, true, nullptr))
-				{
-					makeRequest = true;
-				} Clay__CloseElement();
-			}
-			
-			
-			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
-			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(1)) } }, .backgroundColor = MonokaiGray1 })
-			{
-				CLAY({
-					.layout = {
-						.sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-						.padding = { .left = UI_U16(8), .right = UI_U16(8) },
-						.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
-					},
-					.floating = {
-						.attachTo = CLAY_ATTACH_TO_PARENT,
-						.attachPoints = {
-							.parent = CLAY_ATTACH_POINT_CENTER_CENTER,
-							.element = CLAY_ATTACH_POINT_CENTER_CENTER,
-						},
-					},
-					.backgroundColor = MonokaiBack,
-				})
-				{
-					CLAY_TEXT(
-						StrLit("Result"),
-						CLAY_TEXT_CONFIG({
-							.fontId = app->clayUiBoldFontId,
-							.fontSize = (u16)app->uiFontSize,
-							.textColor = MonokaiGray1,
-							.wrapMode = CLAY_TEXT_WRAP_NONE,
-							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-					}));
-				}
-			}
-			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
-			
-			// +==============================+
-			// |          Result Row          |
-			// +==============================+
-			CLAY({ .id = CLAY_ID("ResultRow"),
-				.layout = {
-					.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-					.layoutDirection = CLAY_LEFT_TO_RIGHT,
-					.childGap = UI_U16(8),
-				},
-			})
-			{
-				// +==============================+
-				// |         History List         |
-				// +==============================+
-				UiListViewItem* historyListItems = nullptr;
-				if (app->history.length > 0)
-				{
-					historyListItems = AllocArray(UiListViewItem, scratch, app->history.length);
-					NotNull(historyListItems);
-					for (uxx hIndex = app->history.length; hIndex > 0; hIndex--)
-					{
-						VarArrayLoopGet(HistoryItem, historyItem, &app->history, hIndex-1);
-						UiListViewItem* item = &historyListItems[app->history.length - hIndex];
-						ClearPointer(item);
-						item->idStr = PrintInArenaStr(uiArena, "History%llu", historyItem->id);
-						item->displayStr = AllocStr8(uiArena, historyItem->url);
-						item->font = &app->uiFont;
-						item->fontStyle = UI_FONT_STYLE;
-						item->fontSize = app->uiFontSize;
-						item->contraction = TextContraction_EllipseLeft;
-					}
-				}
-				DoUiListView(&app->historyListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
-					app->uiScale, CLAY_SIZING_PERCENT(0.20f), CLAY_SIZING_GROW(0), 0,
-					app->history.length, historyListItems);
-				
-				// +==============================+
-				// |        Result TabView        |
-				// +==============================+
-				CLAY({ .id = CLAY_ID("ResultTabList"),
-					.layout = {
-						.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-						.layoutDirection = CLAY_TOP_TO_BOTTOM,
-					},
-				})
-				{
-					CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT } })
-					{
-						for (uxx tIndex = 1; tIndex < ResultTab_Count; tIndex++)
-						{
-							ResultTab tab = (ResultTab)tIndex;
-							ClayId tabId = ToClayIdPrint(uiArena, "%sTab", GetResultTabStr(tab));
-							bool isHovered = IsMouseOverClay(tabId);
-							
-							if (isHovered && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left))
-							{
-								app->currentResultTab = tab;
-							}
-							
-							CLAY({ .id = tabId,
-								.layout = {
-									.sizing = { .width = CLAY_SIZING_FIT(30, 0) },
-									.padding = { .left = UI_U16(12), .right = UI_U16(12), .top = UI_U16(4), .bottom = UI_U16(4) },
-									.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
-								},
-								.backgroundColor = (app->currentResultTab == tab) ? MonokaiDarkGray : (isHovered ? MonokaiGray2 : MonokaiBack),
-								.cornerRadius = { .topLeft = UI_R32(3), .topRight = UI_R32(3) },
-							})
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
 							{
 								CLAY_TEXT(
-									StrLit(GetResultTabStr(tab)),
+									StrLit("Key:"),
 									CLAY_TEXT_CONFIG({
 										.fontId = app->clayUiBoldFontId,
 										.fontSize = (u16)app->uiFontSize,
@@ -863,108 +590,421 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.wrapMode = CLAY_TEXT_WRAP_NONE,
 										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 								}));
+								
+								DoUiTextbox(&app->headerKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								if (app->headerKeyTextbox.textChanged)
+								{
+									app->headerKeyTextbox.textChanged = false;
+									app->editedHeaderInputSinceFilled = true;
+								}
+							}
+							
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+							{
+								CLAY_TEXT(
+									StrLit("Value:"),
+									CLAY_TEXT_CONFIG({
+										.fontId = app->clayUiBoldFontId,
+										.fontSize = (u16)app->uiFontSize,
+										.textColor = MonokaiWhite,
+										.wrapMode = CLAY_TEXT_WRAP_NONE,
+										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+								}));
+								
+								DoUiTextbox(&app->headerValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								if (app->headerValueTextbox.textChanged)
+								{
+									app->headerValueTextbox.textChanged = false;
+									app->editedHeaderInputSinceFilled = true;
+								}
+							}
+							
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) }, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER } } })
+							{
+								CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
+								
+								if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, false, nullptr))
+								{
+									addHeader = true;
+								} Clay__CloseElement();
 							}
 						}
 					}
 					
 					// +==============================+
-					// |       Result Container       |
+					// |         Content List         |
 					// +==============================+
-					CLAY({ .id = CLAY_ID("ResultContainer"),
+					CLAY({ .id = CLAY_ID("ContentCol"),
 						.layout = {
-							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-							// .padding = CLAY_PADDING_ALL(UI_BORDER(2)),
+							.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
 							.layoutDirection = CLAY_TOP_TO_BOTTOM,
 						},
-						.backgroundColor = MonokaiDarkGray,
-						// .scroll = { .vertical=true, .scrollLag=5 },
 					})
 					{
-						switch (app->currentResultTab)
+						CLAY_TEXT(
+							StrLit("Content:"),
+							CLAY_TEXT_CONFIG({
+								.fontId = app->clayUiBoldFontId,
+								.fontSize = (u16)app->uiFontSize,
+								.textColor = MonokaiWhite,
+								.wrapMode = CLAY_TEXT_WRAP_NONE,
+								.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+						}));
+						
 						{
-							// +==============================+
-							// |          Raw Result          |
-							// +==============================+
-							case ResultTab_Raw:
+							UiListViewItem* contentListItems = nullptr;
+							if (app->httpContent.length > 0)
 							{
-								if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+								contentListItems = AllocArray(UiListViewItem, scratch, app->httpContent.length);
+								NotNull(contentListItems);
+								VarArrayLoop(&app->httpContent, cIndex)
 								{
-									HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
-									if (selectedHistory->finished)
+									VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
+									UiListViewItem* item = &contentListItems[cIndex];
+									ClearPointer(item);
+									item->idStr = AllocStr8(scratch, contentItem->key);
+									item->render = RenderContentItem;
+									item->contextPntr = (void*)contentItem;
+								}
+							}
+							app->contentListView.contextPntr = (void*)&app->httpContent;
+							app->removedContentThisFrame = false;
+							DoUiListView(&app->contentListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+								app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+								app->httpContent.length, contentListItems);
+							
+							if (app->contentListView.selectionChanged)
+							{
+								app->contentListView.selectionChanged = false;
+								if (app->contentListView.selectionActive && !app->removedContentThisFrame)
+								{
+									if (!app->editedContentInputSinceFilled || (app->contentKeyTextbox.text.length == 0 && app->contentValueTextbox.text.length == 0))
 									{
-										if (selectedHistory->response.length > 0)
+										Str8Pair* contentItem = VarArrayGet(Str8Pair, &app->httpContent, app->contentListView.selectionIndex);
+										UiTextboxSetText(&app->contentKeyTextbox, contentItem->key);
+										UiTextboxSetText(&app->contentValueTextbox, contentItem->value);
+										app->contentKeyTextbox.textChanged = false;
+										app->contentValueTextbox.textChanged = false;
+										app->editedContentInputSinceFilled = false;
+									}
+								}
+								else if (!app->contentListView.selectionActive && !app->editedContentInputSinceFilled)
+								{
+									UiTextboxClear(&app->contentKeyTextbox);
+									UiTextboxClear(&app->contentValueTextbox);
+									app->contentKeyTextbox.textChanged = false;
+									app->contentValueTextbox.textChanged = false;
+								}
+							}
+						}
+						
+						CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+						{
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+							{
+								CLAY_TEXT(
+									StrLit("Key:"),
+									CLAY_TEXT_CONFIG({
+										.fontId = app->clayUiBoldFontId,
+										.fontSize = (u16)app->uiFontSize,
+										.textColor = MonokaiWhite,
+										.wrapMode = CLAY_TEXT_WRAP_NONE,
+										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+								}));
+								
+								DoUiTextbox(&app->contentKeyTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								if (app->contentKeyTextbox.textChanged)
+								{
+									app->contentKeyTextbox.textChanged = false;
+									app->editedContentInputSinceFilled = true;
+								}
+							}
+							
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+							{
+								CLAY_TEXT(
+									StrLit("Value:"),
+									CLAY_TEXT_CONFIG({
+										.fontId = app->clayUiBoldFontId,
+										.fontSize = (u16)app->uiFontSize,
+										.textColor = MonokaiWhite,
+										.wrapMode = CLAY_TEXT_WRAP_NONE,
+										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+								}));
+								
+								DoUiTextbox(&app->contentValueTextbox, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse, &app->focusedTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								if (app->contentValueTextbox.textChanged)
+								{
+									app->contentValueTextbox.textChanged = false;
+									app->editedContentInputSinceFilled = true;
+								}
+							}
+							
+							CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) } } })
+							{
+								CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
+								
+								if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, nullptr))
+								{
+									addContent = true;
+								} Clay__CloseElement();
+							}
+						}
+					}
+				}
+				
+				// +==============================+
+				// |          Submit Row          |
+				// +==============================+
+				CLAY({ .id = CLAY_ID("SubmitRow"),
+					.layout = {
+						.sizing = { .width = CLAY_SIZING_GROW(0), },
+						.layoutDirection = CLAY_LEFT_TO_RIGHT,
+						.padding = CLAY_PADDING_ALL(UI_U16(8)),
+						.childGap = UI_U16(8),
+					},
+				})
+				{
+					if (ClayBtn(GetHttpVerbStr(app->httpVerb), "", true, false, nullptr))
+					{
+						if (app->httpVerb+1 < HttpVerb_Count) { app->httpVerb = (HttpVerb)(app->httpVerb + 1); }
+						else { app->httpVerb = (HttpVerb)1; }
+					} Clay__CloseElement();
+					
+					if (ClayBtn("Make Request", "", canMakeRequest, true, nullptr))
+					{
+						makeRequest = true;
+					} Clay__CloseElement();
+				}
+				
+				// +==============================+
+				// |       Results Divider        |
+				// +==============================+
+				CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
+				CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(UI_R32(1)) } }, .backgroundColor = MonokaiGray1 })
+				{
+					CLAY({
+						.layout = {
+							.sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+							.padding = { .left = UI_U16(8), .right = UI_U16(8) },
+							.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+						},
+						.floating = {
+							.attachTo = CLAY_ATTACH_TO_PARENT,
+							.attachPoints = {
+								.parent = CLAY_ATTACH_POINT_CENTER_CENTER,
+								.element = CLAY_ATTACH_POINT_CENTER_CENTER,
+							},
+						},
+						.backgroundColor = MonokaiBack,
+					})
+					{
+						CLAY_TEXT(
+							StrLit("Result"),
+							CLAY_TEXT_CONFIG({
+								.fontId = app->clayUiBoldFontId,
+								.fontSize = (u16)app->uiFontSize,
+								.textColor = MonokaiGray1,
+								.wrapMode = CLAY_TEXT_WRAP_NONE,
+								.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+						}));
+					}
+				}
+				CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED((fontHeight-UI_R32(1))/2.0f) } } }) {}
+				
+				// +==============================+
+				// |          Result Row          |
+				// +==============================+
+				CLAY({ .id = CLAY_ID("ResultRow"),
+					.layout = {
+						.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+						.layoutDirection = CLAY_LEFT_TO_RIGHT,
+						.childGap = UI_U16(8),
+					},
+				})
+				{
+					// +==============================+
+					// |         History List         |
+					// +==============================+
+					UiListViewItem* historyListItems = nullptr;
+					if (app->history.length > 0)
+					{
+						historyListItems = AllocArray(UiListViewItem, scratch, app->history.length);
+						NotNull(historyListItems);
+						for (uxx hIndex = app->history.length; hIndex > 0; hIndex--)
+						{
+							VarArrayLoopGet(HistoryItem, historyItem, &app->history, hIndex-1);
+							UiListViewItem* item = &historyListItems[app->history.length - hIndex];
+							ClearPointer(item);
+							item->idStr = PrintInArenaStr(uiArena, "History%llu", historyItem->id);
+							item->displayStr = AllocStr8(uiArena, historyItem->url);
+							item->font = &app->uiFont;
+							item->fontStyle = UI_FONT_STYLE;
+							item->fontSize = app->uiFontSize;
+							item->contraction = TextContraction_EllipseLeft;
+						}
+					}
+					DoUiListView(&app->historyListView, &app->clay, uiArena, &appIn->keyboard, &appIn->mouse,
+						app->uiScale, CLAY_SIZING_PERCENT(0.20f), CLAY_SIZING_GROW(0), 0,
+						app->history.length, historyListItems);
+					
+					// +==============================+
+					// |        Result TabView        |
+					// +==============================+
+					CLAY({ .id = CLAY_ID("ResultTabList"),
+						.layout = {
+							.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+							.layoutDirection = CLAY_TOP_TO_BOTTOM,
+						},
+					})
+					{
+						CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT } })
+						{
+							for (uxx tIndex = 1; tIndex < ResultTab_Count; tIndex++)
+							{
+								ResultTab tab = (ResultTab)tIndex;
+								ClayId tabId = ToClayIdPrint(uiArena, "%sTab", GetResultTabStr(tab));
+								bool isHovered = IsMouseOverClay(tabId);
+								
+								if (isHovered && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left))
+								{
+									app->currentResultTab = tab;
+								}
+								
+								CLAY({ .id = tabId,
+									.layout = {
+										.sizing = { .width = CLAY_SIZING_FIT(30, 0) },
+										.padding = { .left = UI_U16(12), .right = UI_U16(12), .top = UI_U16(4), .bottom = UI_U16(4) },
+										.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+									},
+									.backgroundColor = (app->currentResultTab == tab) ? MonokaiDarkGray : (isHovered ? MonokaiGray2 : MonokaiBack),
+									.cornerRadius = { .topLeft = UI_R32(3), .topRight = UI_R32(3) },
+								})
+								{
+									CLAY_TEXT(
+										StrLit(GetResultTabStr(tab)),
+										CLAY_TEXT_CONFIG({
+											.fontId = app->clayUiBoldFontId,
+											.fontSize = (u16)app->uiFontSize,
+											.textColor = MonokaiWhite,
+											.wrapMode = CLAY_TEXT_WRAP_NONE,
+											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+									}));
+								}
+							}
+						}
+						
+						// +==============================+
+						// |       Result Container       |
+						// +==============================+
+						CLAY({ .id = CLAY_ID("ResultContainer"),
+							.layout = {
+								.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+								// .padding = CLAY_PADDING_ALL(UI_BORDER(2)),
+								.layoutDirection = CLAY_TOP_TO_BOTTOM,
+							},
+							.backgroundColor = MonokaiDarkGray,
+							// .scroll = { .vertical=true, .scrollLag=5 },
+						})
+						{
+							switch (app->currentResultTab)
+							{
+								// +==============================+
+								// |          Raw Result          |
+								// +==============================+
+								case ResultTab_Raw:
+								{
+									if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+									{
+										HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
+										if (selectedHistory->finished)
 										{
-											DoUiLargeTextView(&app->responseTextView, &app->clay, uiArena, 
-												&appIn->keyboard, &appIn->mouse,
-												app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
-												&selectedHistory->responseLargeText,
-												&app->uiFont, app->uiFontSize, UI_FONT_STYLE
-											);
-											
-											CLAY({
-												.layout = {
-													.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-													.layoutDirection = CLAY_LEFT_TO_RIGHT,
-													.padding = CLAY_PADDING_ALL(UI_U16(4)),
-													.childGap = UI_U16(8),
-													.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
-												},
-												.backgroundColor = MonokaiBack,
-											})
+											if (selectedHistory->response.length > 0)
 											{
-												DoUiCheckbox(
-													StrLit("WordWrapCheckbox"), &app->responseTextView.wordWrapEnabled,
-													&app->clay, uiArena, &appIn->mouse, app->uiScale,
-													20.0f, nullptr, StrLit("Word Wrap"), Dir2_Left, &app->uiFont, app->uiFontSize, UI_FONT_STYLE
+												DoUiLargeTextView(&app->responseTextView, &app->clay, uiArena, 
+													&appIn->keyboard, &appIn->mouse,
+													app->uiScale, CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
+													&selectedHistory->responseLargeText,
+													&app->uiFont, app->uiFontSize, UI_FONT_STYLE
 												);
 												
-												if (ClayBtnStr(StrLit("Save to File"), Str8_Empty, true, false, nullptr))
+												CLAY({
+													.layout = {
+														.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+														.layoutDirection = CLAY_LEFT_TO_RIGHT,
+														.padding = CLAY_PADDING_ALL(UI_U16(4)),
+														.childGap = UI_U16(8),
+														.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
+													},
+													.backgroundColor = MonokaiBack,
+												})
 												{
-													Str8Pair extensions[] = {
-														{ StrLit("All Files"), StrLit("*.*") },
-														{ StrLit("Text Files"), StrLit("*.txt") },
-														{ StrLit("HTML"), StrLit("*.html") },
-														{ StrLit("JSON"), StrLit("*.json") },
-													};
-													FilePath saveFilePath = FilePath_Empty;
-													Result saveResult = OsDoSaveFileDialog(ArrayCount(extensions), &extensions[0], 1, scratch, &saveFilePath);
-													if (saveResult == Result_Success)
+													DoUiCheckbox(
+														StrLit("WordWrapCheckbox"), &app->responseTextView.wordWrapEnabled,
+														&app->clay, uiArena, &appIn->mouse, app->uiScale,
+														20.0f, nullptr, StrLit("Word Wrap"), Dir2_Left, &app->uiFont, app->uiFontSize, UI_FONT_STYLE
+													);
+													
+													if (ClayBtnStr(StrLit("Save to File"), Str8_Empty, true, false, nullptr))
 													{
-														PrintLine_D("Saving to \"%.*s\"...", StrPrint(saveFilePath));
-														bool writeSuccess = OsWriteFile(saveFilePath, selectedHistory->response, false);
-														Assert(writeSuccess);
-													}
-												} Clay__CloseElement();
-												
-												Str8 infoStr = PrintInArenaStr(uiArena, "%llu byte%s", selectedHistory->response.length, Plural(selectedHistory->response.length, "s"));
+														Str8Pair extensions[] = {
+															{ StrLit("All Files"), StrLit("*.*") },
+															{ StrLit("Text Files"), StrLit("*.txt") },
+															{ StrLit("HTML"), StrLit("*.html") },
+															{ StrLit("JSON"), StrLit("*.json") },
+														};
+														FilePath saveFilePath = FilePath_Empty;
+														Result saveResult = OsDoSaveFileDialog(ArrayCount(extensions), &extensions[0], 1, scratch, &saveFilePath);
+														if (saveResult == Result_Success)
+														{
+															PrintLine_D("Saving to \"%.*s\"...", StrPrint(saveFilePath));
+															bool writeSuccess = OsWriteFile(saveFilePath, selectedHistory->response, false);
+															Assert(writeSuccess);
+														}
+													} Clay__CloseElement();
+													
+													Str8 infoStr = PrintInArenaStr(uiArena, "%llu byte%s", selectedHistory->response.length, Plural(selectedHistory->response.length, "s"));
+													CLAY_TEXT(
+														infoStr,
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiGray1,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+															.userData = { .contraction = TextContraction_ClipRight },
+													}));
+													
+													Str8 scrollStr = PrintInArenaStr(uiArena, "Line %llu offset %g", selectedHistory->responseLargeText.scrollLineIndex, selectedHistory->responseLargeText.scrollLineOffset);
+													CLAY_TEXT(
+														scrollStr,
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiGray2,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+															.userData = { .contraction = TextContraction_ClipRight },
+													}));
+												}
+											}
+											else
+											{
 												CLAY_TEXT(
-													infoStr,
+													StrLit("[Empty]"),
 													CLAY_TEXT_CONFIG({
 														.fontId = app->clayUiFontId,
 														.fontSize = (u16)app->uiFontSize,
 														.textColor = MonokaiGray1,
-														.wrapMode = CLAY_TEXT_WRAP_NONE,
-														.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
-														.userData = { .contraction = TextContraction_ClipRight },
-												}));
-												
-												Str8 scrollStr = PrintInArenaStr(uiArena, "Line %llu offset %g", selectedHistory->responseLargeText.scrollLineIndex, selectedHistory->responseLargeText.scrollLineOffset);
-												CLAY_TEXT(
-													scrollStr,
-													CLAY_TEXT_CONFIG({
-														.fontId = app->clayUiFontId,
-														.fontSize = (u16)app->uiFontSize,
-														.textColor = MonokaiGray2,
-														.wrapMode = CLAY_TEXT_WRAP_NONE,
-														.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
-														.userData = { .contraction = TextContraction_ClipRight },
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 												}));
 											}
 										}
 										else
 										{
 											CLAY_TEXT(
-												StrLit("[Empty]"),
+												StrLit("[In progress...]"),
 												CLAY_TEXT_CONFIG({
 													.fontId = app->clayUiFontId,
 													.fontSize = (u16)app->uiFontSize,
@@ -977,7 +1017,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 									else
 									{
 										CLAY_TEXT(
-											StrLit("[In progress...]"),
+											StrLit("[Nothing selected]"),
 											CLAY_TEXT_CONFIG({
 												.fontId = app->clayUiFontId,
 												.fontSize = (u16)app->uiFontSize,
@@ -986,36 +1026,44 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 										}));
 									}
-								}
-								else
+								} break;
+								
+								default: 
 								{
 									CLAY_TEXT(
-										StrLit("[Nothing selected]"),
+										StrLit("Not Implemented Yet!"),
 										CLAY_TEXT_CONFIG({
 											.fontId = app->clayUiFontId,
 											.fontSize = (u16)app->uiFontSize,
-											.textColor = MonokaiGray1,
+											.textColor = MonokaiOrange,
 											.wrapMode = CLAY_TEXT_WRAP_WORDS,
 											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 									}));
-								}
-							} break;
-							
-							default: 
-							{
-								CLAY_TEXT(
-									StrLit("Not Implemented Yet!"),
-									CLAY_TEXT_CONFIG({
-										.fontId = app->clayUiFontId,
-										.fontSize = (u16)app->uiFontSize,
-										.textColor = MonokaiOrange,
-										.wrapMode = CLAY_TEXT_WRAP_WORDS,
-										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-								}));
-							} break;
+								} break;
+							}
 						}
 					}
 				}
+			}
+			
+			CLAY({ .id = CLAY_ID("StatusBar"),
+				.layout = {
+					.sizing = {.width = CLAY_SIZING_GROW(0), .height = UI_R32(fontHeight + 4) },
+					.padding = { .left = UI_U16(8), .right = UI_U16(8) },
+					.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
+				},
+				.backgroundColor = MonokaiMagenta,
+			})
+			{
+				CLAY_TEXT(
+					StrLit("This is an error!"),
+					CLAY_TEXT_CONFIG({
+						.fontId = app->clayUiFontId,
+						.fontSize = (u16)app->uiFontSize,
+						.textColor = MonokaiWhite,
+						.wrapMode = CLAY_TEXT_WRAP_WORDS,
+						.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+				}));
 			}
 		}
 		TracyCZoneEnd(Zone_UI);
