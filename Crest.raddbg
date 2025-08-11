@@ -1,6 +1,8 @@
 // raddbg 0.9.20 project file
 
 recent_file: path: "app/app_main.c"
+recent_file: path: "core/struct/struct_ranges.h"
+recent_file: path: "core/struct/struct_rich_string.h"
 recent_file: path: "core/ui/ui_clay_hover_info_icon.h"
 recent_file: path: "core/third_party/clay/clay_private_api.c"
 recent_file: path: "core/cross/cross_rich_string_scratch_and_ranges.h"
@@ -12,7 +14,6 @@ recent_file: path: "core/os/os_http.h"
 recent_file: path: "core/cross/cross_string_and_ranges.h"
 recent_file: path: "core/gfx/gfx_font_flow.h"
 recent_file: path: "core/mem/mem_arena.h"
-recent_file: path: "core/struct/struct_rich_string.h"
 recent_file: path: "core/third_party/handmade_math/handmademath.h"
 recent_file: path: "core/struct/struct_var_array.h"
 recent_file: path: "core/os/os_threading.h"
@@ -102,4 +103,29 @@ watch_pin:
 {
   expression: "state.font"
   source_location: "core/gfx/gfx_font_flow.h:263:1"
+}
+type_view:
+{
+  type: RangeUXX
+  expr: "rows($, $.min, $.max)"
+}
+type_view:
+{
+  type: RangeIXX
+  expr: "rows($, $.min, $.max)"
+}
+type_view:
+{
+  type: RangeR32
+  expr: "rows($, $.min, $.max)"
+}
+type_view:
+{
+  type: NewRangeR64
+  expr: "rows($, $.min, $.max)"
+}
+breakpoint:
+{
+  source_location: "app/app_main.c:502:1"
+  hit_count: 1
 }

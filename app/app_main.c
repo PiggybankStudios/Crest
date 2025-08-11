@@ -482,55 +482,56 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					
 					DoUiTextbox(&uiContext, &app->urlTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
 					
-					StrRange* errors = nullptr;
-					uxx numErrors = GetUriErrors(scratch, app->urlTextbox.text, &errors);
+					StrErrorList errorList = NewStrErrorList(scratch, 16);
+					GetUriErrors(app->urlTextbox.text, &errorList);
 					
 					if (app->urlTextbox.textChanged)
 					{
 						app->urlTextbox.textChanged = false;
 						UiTextboxClearSyntaxRanges(&app->urlTextbox);
-						app->urlTextbox.displayRedOutline = (numErrors > 0);
-						for (uxx eIndex = 0; eIndex < numErrors; eIndex++)
+						app->urlTextbox.displayRedOutline = (errorList.numErrors > 0);
+						if (errorList.numErrors > 0)
 						{
-							StrRange* errorRange = &errors[eIndex];
-							UiTextboxAddSyntaxRange(&app->urlTextbox, errorRange->range, NewRichStrStyleChangeColor(MonokaiMagenta, false));
+							uxx numMergedRanges = errorList.numErrors;
+							RangeUXX* mergedRanges = AllocArray(RangeUXX, scratch, errorList.numErrors);
+							for (uxx eIndex = 0; eIndex < errorList.numErrors; eIndex++)
+							{
+								mergedRanges[eIndex] = errorList.errors[eIndex].range;
+							}
+							numMergedRanges = CombineOverlappingAndConsecutiveRangesUXX(numMergedRanges, mergedRanges);
+							for (uxx eIndex = 0; eIndex < numMergedRanges; eIndex++)
+							{
+								UiTextboxAddSyntaxRange(&app->urlTextbox, mergedRanges[eIndex], NewRichStrStyleChangeColor(MonokaiMagenta, false));
+							}
 						}
 					}
 					
-					if (numErrors > 0)
+					if (errorList.numErrors > 0)
 					{
-						DoUiHoverableInterleaved(section, &uiContext, StrLit("UrlErrorIcon"), Dir2_Down)
+						CLAY({
+							.floating = {
+								.attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+								.parentId = app->urlTextbox.id.id,
+								.attachPoints = { .parent = CLAY_ATTACH_POINT_RIGHT_CENTER, .element = CLAY_ATTACH_POINT_RIGHT_CENTER },
+								.offset = NewV2(UI_R32(-8), 0),
+							},
+						})
 						{
-							DoUiHoverableSection(section, HoverArea)
+							DoUiHoverableInterleaved(section, &uiContext, StrLit("UrlErrorIcon"), Dir2_Down)
 							{
-								CLAY({
-									.layout = {
-										.sizing = { .width = CLAY_SIZING_FIT(UI_R32(24)), .height = CLAY_SIZING_FIXED(UI_R32(24)) },
-										.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
-									},
-									.border = { .width = UI_BORDER(2), .color = MonokaiMagenta },
-									.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(24/2)),
-								})
+								DoUiHoverableSection(section, HoverArea)
 								{
-									CLAY_TEXT(
-										StrLit("!"),
-										CLAY_TEXT_CONFIG({
-											.fontId = app->clayUiBoldFontId,
-											.fontSize = (u16)app->uiFontSize,
-											.textColor = MonokaiMagenta,
-											.wrapMode = CLAY_TEXT_WRAP_NONE,
-											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-									}));
-								}
-							}
-							DoUiHoverableSection(section, Tooltip)
-							{
-								CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .childGap = UI_U16(4) } })
-								{
-									for (uxx eIndex = 0; eIndex < numErrors; eIndex++)
+									CLAY({
+										.layout = {
+											.sizing = { .width = CLAY_SIZING_FIT(UI_R32(18)), .height = CLAY_SIZING_FIXED(UI_R32(18)) },
+											.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+										},
+										.border = { .width = UI_BORDER(1), .color = MonokaiMagenta },
+										.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(18/2)),
+									})
 									{
 										CLAY_TEXT(
-											errors[eIndex].str,
+											StrLit("!"),
 											CLAY_TEXT_CONFIG({
 												.fontId = app->clayUiBoldFontId,
 												.fontSize = (u16)app->uiFontSize,
@@ -538,6 +539,36 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 												.wrapMode = CLAY_TEXT_WRAP_NONE,
 												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 										}));
+									}
+								}
+								DoUiHoverableSection(section, Tooltip)
+								{
+									CLAY({
+										.layout = {
+											.layoutDirection = CLAY_TOP_TO_BOTTOM,
+											.padding = CLAY_PADDING_ALL(UI_U16(8)),
+											.childGap = UI_U16(4),
+										},
+										.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(2)), .color = MonokaiMagenta },
+										.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
+										.backgroundColor = MonokaiDarkGray,
+									})
+									{
+										for (uxx eIndex = 0; eIndex < errorList.numErrors; eIndex++)
+										{
+											if (errorList.errors[eIndex].duplicateIndex == UINTXX_MAX)
+											{
+												CLAY_TEXT(
+													errorList.errors[eIndex].error,
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiBoldFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiMagenta,
+														.wrapMode = CLAY_TEXT_WRAP_NONE,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+										}
 									}
 								}
 							}
