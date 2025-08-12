@@ -1,5 +1,6 @@
 // raddbg 0.9.20 project file
 
+recent_file: path: "core/struct/struct_typed_array.h"
 recent_file: path: "app/app_main.c"
 recent_file: path: "core/struct/struct_ranges.h"
 recent_file: path: "core/struct/struct_rich_string.h"
@@ -19,7 +20,6 @@ recent_file: path: "core/struct/struct_var_array.h"
 recent_file: path: "core/os/os_threading.h"
 recent_file: path: "core/gfx/gfx_clay_renderer.h"
 recent_file: path: "core/std/std_basic_math.h"
-recent_file: path: "core/struct/struct_typed_array.h"
 recent_file: path: "core/third_party/clay/clay_arrays.c"
 recent_file: path: "app/platform_main.c"
 recent_file: path: "core/third_party/clay/clay_public_api.c"
@@ -123,9 +123,4 @@ type_view:
 {
   type: NewRangeR64
   expr: "rows($, $.min, $.max)"
-}
-breakpoint:
-{
-  source_location: "app/app_main.c:502:1"
-  hit_count: 1
 }

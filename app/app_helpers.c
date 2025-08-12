@@ -145,7 +145,7 @@ bool AppChangeFontSize(bool increase)
 }) {}
 
 //Call Clay__CloseElement once after if statement
-bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
+bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool hasError, bool growWidth, Texture* icon)
 {
 	Str8 fullIdStr = PrintInArenaStr(uiArena, "Btn_%.*s", StrPrint(idStr));
 	Str8 hotkeyIdStr = PrintInArenaStr(uiArena, "Btn_%.*s_Hotkey", StrPrint(idStr));
@@ -153,9 +153,9 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 	ClayId hotkeyId = ToClayId(hotkeyIdStr);
 	bool isHovered = IsMouseOverClay(btnId);
 	bool isPressed = (isHovered && IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
-	Color32 backgroundColor = !isEnabled ? MonokaiBack : (isPressed ? MonokaiGray2 : (isHovered ? MonokaiGray1 : MonokaiDarkGray));
-	Color32 borderColor = isEnabled ? MonokaiWhite : MonokaiGray1;
-	Color32 textColor = (isEnabled && isHovered) ? MonokaiDarkGray : MonokaiWhite;
+	Color32 backgroundColor = !isEnabled ? MonokaiBack : (isPressed ? MonokaiGray2 : ((isHovered && !hasError) ? MonokaiGray1 : MonokaiDarkGray));
+	Color32 borderColor = hasError ? MonokaiMagenta : (isEnabled ? MonokaiWhite : MonokaiGray1);
+	Color32 textColor = hasError ? MonokaiMagenta : ((isEnabled && isHovered) ? MonokaiDarkGray : MonokaiWhite);
 	u16 borderWidth = (!isEnabled || (isHovered || isPressed)) ? 1 : 0;
 	Clay__OpenElement();
 	Clay__ConfigureOpenElement((Clay_ElementDeclaration){
@@ -219,11 +219,11 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 			}
 		}
 	}
-	return (isHovered && isEnabled && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left));
+	return (isHovered && isEnabled && !hasError && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left));
 }
 bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
-	return ClayBtnStrEx(btnText, btnText, hotkeyStr, isEnabled, growWidth, icon);
+	return ClayBtnStrEx(btnText, btnText, hotkeyStr, isEnabled, false, growWidth, icon);
 }
 bool ClayBtn(const char* btnText, const char* hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
@@ -238,6 +238,104 @@ uxx FindStr8PairInArray(VarArray* array, Str8 key)
 		if (StrExactEquals(item->key, key)) { return iIndex; }
 	}
 	return array->length;
+}
+
+void DoErrorHoverable(UiWidgetContext* uiContext, Str8 uiElementIdStr, StrErrorList* errorList, bool openOverride)
+{
+	NotNull(uiContext);
+	NotNull(errorList);
+	ClayId uiElementId = ToClayId(uiElementIdStr);
+	if (errorList->numErrors > 0)
+	{
+		CLAY({
+			.floating = {
+				.attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+				.parentId = uiElementId.id,
+				.attachPoints = { .parent = CLAY_ATTACH_POINT_RIGHT_CENTER, .element = CLAY_ATTACH_POINT_RIGHT_CENTER },
+				.offset = NewV2(UI_R32(-8), 0),
+			},
+		})
+		{
+			Str8 hoverableId = PrintInArenaStr(uiArena, "%.*s_ErrorIcon", StrPrint(uiElementIdStr));
+			DoUiHoverableInterleaved(section, uiContext, hoverableId, Dir2_Down, openOverride)
+			{
+				DoUiHoverableSection(section, HoverArea)
+				{
+					CLAY({
+						.layout = {
+							.sizing = { .width = CLAY_SIZING_FIT(UI_R32(18)), .height = CLAY_SIZING_FIXED(UI_R32(18)) },
+							.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+						},
+						.border = { .width = UI_BORDER(1), .color = MonokaiMagenta },
+						.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(18/2)),
+					})
+					{
+						CLAY_TEXT(
+							StrLit("!"),
+							CLAY_TEXT_CONFIG({
+								.fontId = app->clayUiBoldFontId,
+								.fontSize = (u16)app->uiFontSize,
+								.textColor = MonokaiMagenta,
+								.wrapMode = CLAY_TEXT_WRAP_NONE,
+								.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+						}));
+					}
+				}
+				DoUiHoverableSection(section, Tooltip)
+				{
+					CLAY({
+						.layout = {
+							.layoutDirection = CLAY_TOP_TO_BOTTOM,
+							.padding = CLAY_PADDING_ALL(UI_U16(8)),
+							.childGap = UI_U16(4),
+						},
+						.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(2)), .color = MonokaiMagenta },
+						.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
+						.backgroundColor = MonokaiDarkGray,
+					})
+					{
+						for (uxx eIndex = 0; eIndex < errorList->numErrors; eIndex++)
+						{
+							if (errorList->errors[eIndex].duplicateIndex == UINTXX_MAX)
+							{
+								CLAY_TEXT(
+									errorList->errors[eIndex].error,
+									CLAY_TEXT_CONFIG({
+										.fontId = app->clayUiBoldFontId,
+										.fontSize = (u16)app->uiFontSize,
+										.textColor = MonokaiMagenta,
+										.wrapMode = CLAY_TEXT_WRAP_NONE,
+										.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+								}));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void HighlightErrorsInTextbox(UiTextbox* tbox, StrErrorList* errorList)
+{
+	UiTextboxClearSyntaxRanges(tbox);
+	tbox->displayRedOutline = (errorList->numErrors > 0);
+	if (errorList->numErrors > 0)
+	{
+		ScratchBegin(scratch);
+		uxx numMergedRanges = errorList->numErrors;
+		RangeUXX* mergedRanges = AllocArray(RangeUXX, scratch, errorList->numErrors);
+		for (uxx eIndex = 0; eIndex < errorList->numErrors; eIndex++)
+		{
+			mergedRanges[eIndex] = errorList->errors[eIndex].range;
+		}
+		numMergedRanges = CombineOverlappingAndConsecutiveRangesUXX(numMergedRanges, mergedRanges);
+		for (uxx eIndex = 0; eIndex < numMergedRanges; eIndex++)
+		{
+			UiTextboxAddSyntaxRange(tbox, mergedRanges[eIndex], NewRichStrStyleChangeColor(MonokaiMagenta, false));
+		}
+		ScratchEnd(scratch);
+	}
 }
 
 #endif //BUILD_WITH_SOKOL_GFX

@@ -67,17 +67,21 @@ struct AppData
 	HttpVerb httpVerb;
 	
 	UiTextbox urlTextbox;
+	bool urlHasErrors;
 	UiListView headersListView;
 	bool removedHeaderThisFrame;
 	bool editedHeaderInputSinceFilled;
 	UiTextbox headerKeyTextbox;
+	bool headerKeyHasErrors;
 	UiTextbox headerValueTextbox;
+	bool headerValueHasErrors;
 	UiListView contentListView;
 	bool removedContentThisFrame;
 	bool editedContentInputSinceFilled;
 	UiTextbox contentKeyTextbox;
 	UiTextbox contentValueTextbox;
 	UiListView historyListView;
+	u64 makeRequestAttemptTime;
 	
 	VarArray httpHeaders; //Str8Pair
 	VarArray httpContent; //Str8Pair

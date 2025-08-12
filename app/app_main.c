@@ -190,7 +190,7 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHeaderItem)
 	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
 	
 	Str8 btnIdStr = PrintInArenaStr(uiArena, "Header_Item%llu_%.*s_DeleteBtn", index, StrPrint(header->key));
-	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, nullptr))
+	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, false, nullptr))
 	{
 		if (!app->removedHeaderThisFrame)
 		{
@@ -226,7 +226,7 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
 	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
 	
 	Str8 btnIdStr = PrintInArenaStr(uiArena, "Content_Item%llu_%.*s_DeleteBtn", index, StrPrint(contentItem->key));
-	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, nullptr))
+	if (ClayBtnStrEx(btnIdStr, StrLit("Del"), Str8_Empty, true, false, false, nullptr))
 	{
 		if (!app->removedContentThisFrame)
 		{
@@ -297,7 +297,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	bool addContent = false;
 	bool canAddContent = (app->contentKeyTextbox.text.length > 0 && app->contentValueTextbox.text.length > 0);
 	bool makeRequest = false;
-	bool canMakeRequest = (app->urlTextbox.text.length > 0);
+	bool canMakeRequest = true;
 	
 	// +==============================+
 	// |            Update            |
@@ -484,95 +484,15 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					
 					StrErrorList errorList = NewStrErrorList(scratch, 16);
 					GetUriErrors(app->urlTextbox.text, &errorList);
+					DoErrorHoverable(&uiContext, app->urlTextbox.idStr, &errorList, false);
+					app->urlHasErrors = (errorList.numErrors > 0);
+					canMakeRequest = !app->urlHasErrors;
+					if (errorList.numErrors == 0) { app->makeRequestAttemptTime = 0; }
 					
 					if (app->urlTextbox.textChanged)
 					{
 						app->urlTextbox.textChanged = false;
-						UiTextboxClearSyntaxRanges(&app->urlTextbox);
-						app->urlTextbox.displayRedOutline = (errorList.numErrors > 0);
-						if (errorList.numErrors > 0)
-						{
-							uxx numMergedRanges = errorList.numErrors;
-							RangeUXX* mergedRanges = AllocArray(RangeUXX, scratch, errorList.numErrors);
-							for (uxx eIndex = 0; eIndex < errorList.numErrors; eIndex++)
-							{
-								mergedRanges[eIndex] = errorList.errors[eIndex].range;
-							}
-							numMergedRanges = CombineOverlappingAndConsecutiveRangesUXX(numMergedRanges, mergedRanges);
-							for (uxx eIndex = 0; eIndex < numMergedRanges; eIndex++)
-							{
-								UiTextboxAddSyntaxRange(&app->urlTextbox, mergedRanges[eIndex], NewRichStrStyleChangeColor(MonokaiMagenta, false));
-							}
-						}
-					}
-					
-					if (errorList.numErrors > 0)
-					{
-						CLAY({
-							.floating = {
-								.attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
-								.parentId = app->urlTextbox.id.id,
-								.attachPoints = { .parent = CLAY_ATTACH_POINT_RIGHT_CENTER, .element = CLAY_ATTACH_POINT_RIGHT_CENTER },
-								.offset = NewV2(UI_R32(-8), 0),
-							},
-						})
-						{
-							DoUiHoverableInterleaved(section, &uiContext, StrLit("UrlErrorIcon"), Dir2_Down)
-							{
-								DoUiHoverableSection(section, HoverArea)
-								{
-									CLAY({
-										.layout = {
-											.sizing = { .width = CLAY_SIZING_FIT(UI_R32(18)), .height = CLAY_SIZING_FIXED(UI_R32(18)) },
-											.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
-										},
-										.border = { .width = UI_BORDER(1), .color = MonokaiMagenta },
-										.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(18/2)),
-									})
-									{
-										CLAY_TEXT(
-											StrLit("!"),
-											CLAY_TEXT_CONFIG({
-												.fontId = app->clayUiBoldFontId,
-												.fontSize = (u16)app->uiFontSize,
-												.textColor = MonokaiMagenta,
-												.wrapMode = CLAY_TEXT_WRAP_NONE,
-												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-										}));
-									}
-								}
-								DoUiHoverableSection(section, Tooltip)
-								{
-									CLAY({
-										.layout = {
-											.layoutDirection = CLAY_TOP_TO_BOTTOM,
-											.padding = CLAY_PADDING_ALL(UI_U16(8)),
-											.childGap = UI_U16(4),
-										},
-										.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(2)), .color = MonokaiMagenta },
-										.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
-										.backgroundColor = MonokaiDarkGray,
-									})
-									{
-										for (uxx eIndex = 0; eIndex < errorList.numErrors; eIndex++)
-										{
-											if (errorList.errors[eIndex].duplicateIndex == UINTXX_MAX)
-											{
-												CLAY_TEXT(
-													errorList.errors[eIndex].error,
-													CLAY_TEXT_CONFIG({
-														.fontId = app->clayUiBoldFontId,
-														.fontSize = (u16)app->uiFontSize,
-														.textColor = MonokaiMagenta,
-														.wrapMode = CLAY_TEXT_WRAP_NONE,
-														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-												}));
-											}
-										}
-									}
-								}
-							}
-						}
+						HighlightErrorsInTextbox(&app->urlTextbox, &errorList);
 					}
 				}
 				
@@ -669,10 +589,17 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 								}));
 								
 								DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								
+								StrErrorList errorList = NewStrErrorList(scratch, 16);
+								GetHttpHeaderKeyErrors(app->headerKeyTextbox.text, &errorList);
+								DoErrorHoverable(&uiContext, app->headerKeyTextbox.idStr, &errorList, false);
+								app->headerKeyHasErrors = (errorList.numErrors > 0);
+								
 								if (app->headerKeyTextbox.textChanged)
 								{
 									app->headerKeyTextbox.textChanged = false;
 									app->editedHeaderInputSinceFilled = true;
+									HighlightErrorsInTextbox(&app->headerKeyTextbox, &errorList);
 								}
 							}
 							
@@ -689,10 +616,17 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 								}));
 								
 								DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+								
+								StrErrorList errorList = NewStrErrorList(scratch, 16);
+								GetHttpHeaderValueErrors(app->headerValueTextbox.text, &errorList);
+								DoErrorHoverable(&uiContext, app->headerValueTextbox.idStr, &errorList, false);
+								app->headerValueHasErrors = (errorList.numErrors > 0);
+								
 								if (app->headerValueTextbox.textChanged)
 								{
 									app->headerValueTextbox.textChanged = false;
 									app->editedHeaderInputSinceFilled = true;
+									HighlightErrorsInTextbox(&app->headerValueTextbox, &errorList);
 								}
 							}
 							
@@ -700,7 +634,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							{
 								CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
 								
-								if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, false, nullptr))
+								if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, (app->headerKeyHasErrors || app->headerValueHasErrors), false, nullptr))
 								{
 									addHeader = true;
 								} Clay__CloseElement();
@@ -821,7 +755,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							{
 								CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
 								
-								if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, nullptr))
+								if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, false, nullptr))
 								{
 									addContent = true;
 								} Clay__CloseElement();
@@ -848,10 +782,16 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						else { app->httpVerb = (HttpVerb)1; }
 					} Clay__CloseElement();
 					
-					if (ClayBtn("Make Request", "", canMakeRequest, true, nullptr))
+					StrErrorList requestErrors = NewStrErrorList(scratch, 1);
+					if (app->urlHasErrors) { AddStrError(&requestErrors, RangeUXX_Zero, StrLit("URL has errors")); }
+					if (ClayBtnStrEx(StrLit("MakeRequest"), StrLit("Make Request"), Str8_Empty, true, (requestErrors.numErrors > 0), true, nullptr))
 					{
 						makeRequest = true;
 					} Clay__CloseElement();
+					Str8 makeRequestBtnIdStr = StrLit("Btn_MakeRequest");
+					ClayId makeRequestBtnId = ToClayId(makeRequestBtnIdStr);
+					bool shouldShowError = (IsMouseOverClay(makeRequestBtnId) || (app->makeRequestAttemptTime > 0 && TimeSinceBy(appIn->programTime, app->makeRequestAttemptTime) < 2000));
+					DoErrorHoverable(&uiContext, makeRequestBtnIdStr, &requestErrors, shouldShowError);
 				}
 				
 				// +==============================+
@@ -1204,60 +1144,65 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	// +==============================+
 	// |         Make Request         |
 	// +==============================+
-	if (makeRequest && canMakeRequest)
+	if (makeRequest)
 	{
-		uxx historyId = app->nextHistoryId;
-		app->nextHistoryId++;
-		
-		HttpRequestArgs args = ZEROED;
-		args.verb = app->httpVerb;
-		args.urlStr = app->urlTextbox.text;
-		args.numHeaders = app->httpHeaders.length;
-		args.headers = (Str8Pair*)app->httpHeaders.items;
-		args.contentEncoding = MimeType_FormUrlEncoded;
-		args.numContentItems = app->httpContent.length;
-		args.contentItems = (Str8Pair*)app->httpContent.items;
-		args.callback = HttpCallback;
-		args.contextId = historyId;
-		HttpRequest* request = OsMakeHttpRequest(platformInfo->http, &args, appIn->programTime);
-		NotNull(request);
-		
-		HistoryItem* historyItem = VarArrayAdd(HistoryItem, &app->history);
-		NotNull(historyItem);
-		ClearPointer(historyItem);
-		historyItem->arena = stdHeap;
-		historyItem->id = historyId;
-		historyItem->httpId = request->id;
-		historyItem->url = AllocStr8(stdHeap, app->urlTextbox.text);
-		historyItem->verb = app->httpVerb;
-		if (app->httpHeaders.length > 0)
+		if (!canMakeRequest) { app->makeRequestAttemptTime = appIn->programTime; }
+		else
 		{
-			historyItem->numHeaders = app->httpHeaders.length;
-			historyItem->headers = AllocArray(Str8Pair, stdHeap, historyItem->numHeaders);
-			NotNull(historyItem->headers);
-			VarArrayLoop(&app->httpHeaders, hIndex)
+			app->makeRequestAttemptTime = 0;
+			uxx historyId = app->nextHistoryId;
+			app->nextHistoryId++;
+			
+			HttpRequestArgs args = ZEROED;
+			args.verb = app->httpVerb;
+			args.urlStr = app->urlTextbox.text;
+			args.numHeaders = app->httpHeaders.length;
+			args.headers = (Str8Pair*)app->httpHeaders.items;
+			args.contentEncoding = MimeType_FormUrlEncoded;
+			args.numContentItems = app->httpContent.length;
+			args.contentItems = (Str8Pair*)app->httpContent.items;
+			args.callback = HttpCallback;
+			args.contextId = historyId;
+			HttpRequest* request = OsMakeHttpRequest(platformInfo->http, &args, appIn->programTime);
+			NotNull(request);
+			
+			HistoryItem* historyItem = VarArrayAdd(HistoryItem, &app->history);
+			NotNull(historyItem);
+			ClearPointer(historyItem);
+			historyItem->arena = stdHeap;
+			historyItem->id = historyId;
+			historyItem->httpId = request->id;
+			historyItem->url = AllocStr8(stdHeap, app->urlTextbox.text);
+			historyItem->verb = app->httpVerb;
+			if (app->httpHeaders.length > 0)
 			{
-				VarArrayLoopGet(Str8Pair, entry, &app->httpHeaders, hIndex);
-				historyItem->headers[hIndex].key = AllocStr8(stdHeap, entry->key);
-				historyItem->headers[hIndex].value = AllocStr8(stdHeap, entry->value);
+				historyItem->numHeaders = app->httpHeaders.length;
+				historyItem->headers = AllocArray(Str8Pair, stdHeap, historyItem->numHeaders);
+				NotNull(historyItem->headers);
+				VarArrayLoop(&app->httpHeaders, hIndex)
+				{
+					VarArrayLoopGet(Str8Pair, entry, &app->httpHeaders, hIndex);
+					historyItem->headers[hIndex].key = AllocStr8(stdHeap, entry->key);
+					historyItem->headers[hIndex].value = AllocStr8(stdHeap, entry->value);
+				}
 			}
-		}
-		if (app->httpContent.length > 0)
-		{
-			historyItem->numContentItems = app->httpContent.length;
-			historyItem->contentItems = AllocArray(Str8Pair, stdHeap, historyItem->numContentItems);
-			NotNull(historyItem->contentItems);
-			VarArrayLoop(&app->httpContent, hIndex)
+			if (app->httpContent.length > 0)
 			{
-				VarArrayLoopGet(Str8Pair, entry, &app->httpContent, hIndex);
-				historyItem->contentItems[hIndex].key = AllocStr8(stdHeap, entry->key);
-				historyItem->contentItems[hIndex].value = AllocStr8(stdHeap, entry->value);
+				historyItem->numContentItems = app->httpContent.length;
+				historyItem->contentItems = AllocArray(Str8Pair, stdHeap, historyItem->numContentItems);
+				NotNull(historyItem->contentItems);
+				VarArrayLoop(&app->httpContent, hIndex)
+				{
+					VarArrayLoopGet(Str8Pair, entry, &app->httpContent, hIndex);
+					historyItem->contentItems[hIndex].key = AllocStr8(stdHeap, entry->key);
+					historyItem->contentItems[hIndex].value = AllocStr8(stdHeap, entry->value);
+				}
 			}
+			
+			app->historyListView.selectionActive = true;
+			FreeStr8(app->historyListView.arena, &app->historyListView.selectedIdStr);
+			app->historyListView.selectedIdStr = PrintInArenaStr(app->historyListView.arena, "History%llu", historyItem->id);
 		}
-		
-		app->historyListView.selectionActive = true;
-		FreeStr8(app->historyListView.arena, &app->historyListView.selectedIdStr);
-		app->historyListView.selectedIdStr = PrintInArenaStr(app->historyListView.arena, "History%llu", historyItem->id);
 	}
 	
 	ScratchEnd(scratch);
