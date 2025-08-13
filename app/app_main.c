@@ -784,7 +784,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					
 					StrErrorList requestErrors = NewStrErrorList(scratch, 1);
 					if (app->urlHasErrors) { AddStrError(&requestErrors, RangeUXX_Zero, StrLit("URL has errors")); }
-					if (ClayBtnStrEx(StrLit("MakeRequest"), StrLit("Make Request"), Str8_Empty, true, (requestErrors.numErrors > 0), true, nullptr))
+					if (ClayBtnStrEx(StrLit("MakeRequest"), StrLit("Make Request"), StrLit("Ctrl+Enter"), true, (requestErrors.numErrors > 0), true, nullptr))
 					{
 						makeRequest = true;
 					} Clay__CloseElement();

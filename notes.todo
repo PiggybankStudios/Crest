@@ -1,4 +1,4 @@
-#TODO List
+# Notes
 	[ ] .http file format "https://timdeschryver.dev/bits/http-files"
 	[ ] Free APIs "https://free-apis.github.io/#/browse"
 		[ ] "https://cataas.com/cat"
@@ -7,4 +7,29 @@
 		[ ] "https://graphqlpokemon.favware.tech/v8" { "query": "{ getPokemon(pokemon: dragonite) { sprite num species color } }" }
 		[ ] "https://http.cat/404"
 		[ ] "https://echo.free.beeceptor.com"
+	[ ] 
+
+# TODO List
+	[!] HTTP Response Metadata tab
+	[!] Resizable Divider Widget
+	[!] Combobox Widget
+	[!] Indicate in-progress request
+	[!] Trash Symbol for Delete Button
+	[!] Save history to file
+	[ ] Selection in UiLargeTextView
+	[ ] Double/Triple Click Selection in Textboxes
+	[ ] Copy+Paste in Textboxes and UiLargeTextView
+	[ ] Input "Handling" System
+	[ ] Hot-Reload App DLL
+	[ ] Focus System
+	[ ] Finish Scroll Behavior in UiLargeTextView
+	[ ] Other HTTP Content Encodings?
+	[ ] Themes and UI Coloring
+	[ ] Sorting Algorithms (Use for MergeOverlappingAndConsecutiveRangesUXX)
+	[ ] Multi-threading implementations
+	[ ] Dedicated WinHTTP service thread? Multiple in-flight requests?
+	[ ] JSON Formatting
+	[ ] Image Response Display (url-follow?)
+	[ ] Vector art icons baked into code?
+	[ ] Tooltips!
 	[ ] 

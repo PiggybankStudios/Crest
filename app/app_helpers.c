@@ -152,11 +152,11 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 	ClayId btnId = ToClayId(fullIdStr);
 	ClayId hotkeyId = ToClayId(hotkeyIdStr);
 	bool isHovered = IsMouseOverClay(btnId);
-	bool isPressed = (isHovered && IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
+	bool isPressed = (isHovered && !hasError && IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
 	Color32 backgroundColor = !isEnabled ? MonokaiBack : (isPressed ? MonokaiGray2 : ((isHovered && !hasError) ? MonokaiGray1 : MonokaiDarkGray));
 	Color32 borderColor = hasError ? MonokaiMagenta : (isEnabled ? MonokaiWhite : MonokaiGray1);
 	Color32 textColor = hasError ? MonokaiMagenta : ((isEnabled && isHovered) ? MonokaiDarkGray : MonokaiWhite);
-	u16 borderWidth = (!isEnabled || (isHovered || isPressed)) ? 1 : 0;
+	u16 borderWidth = (!isEnabled || hasError || isHovered || isPressed) ? 1 : 0;
 	Clay__OpenElement();
 	Clay__ConfigureOpenElement((Clay_ElementDeclaration){
 		.id = btnId,
@@ -192,25 +192,18 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 				.userData = { .contraction = TextContraction_ClipRight },
 			})
 		);
-		if (!IsEmptyStr(hotkeyStr))
+		if (!IsEmptyStr(hotkeyStr) && !hasError)
 		{
 			CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0) }, } }) {}
 			
-			CLAY({ .id=hotkeyId,
-				.layout = {
-					.layoutDirection = CLAY_LEFT_TO_RIGHT,
-					.padding = CLAY_PADDING_ALL(UI_U16(2)),
-				},
-				.border = { .width=CLAY_BORDER_OUTSIDE(UI_BORDER(1)), .color = MonokaiLightGray },
-				.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
-			})
+			CLAY({ .id=hotkeyId, .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT } })
 			{
 				CLAY_TEXT(
 					hotkeyStr,
 					CLAY_TEXT_CONFIG({
 						.fontId = app->clayUiFontId,
 						.fontSize = (u16)app->uiFontSize,
-						.textColor = MonokaiLightGray,
+						.textColor = (isEnabled && isHovered) ? MonokaiDarkGray : MonokaiLightGray,
 						.wrapMode = CLAY_TEXT_WRAP_NONE,
 						.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
 						.userData = { .contraction = TextContraction_ClipRight },
@@ -257,7 +250,7 @@ void DoErrorHoverable(UiWidgetContext* uiContext, Str8 uiElementIdStr, StrErrorL
 		})
 		{
 			Str8 hoverableId = PrintInArenaStr(uiArena, "%.*s_ErrorIcon", StrPrint(uiElementIdStr));
-			DoUiHoverableInterleaved(section, uiContext, hoverableId, Dir2_Down, openOverride)
+			DoUiHoverableInterleaved(section, uiContext, hoverableId, Dir2_Up, ToV2Fromi(appIn->screenSize), openOverride)
 			{
 				DoUiHoverableSection(section, HoverArea)
 				{
