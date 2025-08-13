@@ -10,14 +10,14 @@
 	[ ] 
 
 # TODO List
-	[!] HTTP Response Metadata tab
+	[X] HTTP Response Metadata tab
 	[!] Resizable Divider Widget
 	[!] Combobox Widget
-	[!] Indicate in-progress request
 	[!] Trash Symbol for Delete Button
 	[!] Save history to file
 	[ ] Selection in UiLargeTextView
 	[ ] Double/Triple Click Selection in Textboxes
+	[ ] Change sokol_app.h to handle clipboard allocation better
 	[ ] Copy+Paste in Textboxes and UiLargeTextView
 	[ ] Input "Handling" System
 	[ ] Hot-Reload App DLL
@@ -32,4 +32,7 @@
 	[ ] Image Response Display (url-follow?)
 	[ ] Vector art icons baked into code?
 	[ ] Tooltips!
+	[ ] Load history item button
+	[?] Fancy in-progress request indication?
+	[ ] UI Widgets change mouse icon
 	[ ] 
