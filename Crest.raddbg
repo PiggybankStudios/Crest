@@ -1,5 +1,6 @@
 // raddbg 0.9.20 project file
 
+recent_file: path: "core/os/os_http.h"
 recent_file: path: "core/struct/struct_typed_array.h"
 recent_file: path: "app/app_main.c"
 recent_file: path: "core/struct/struct_ranges.h"
@@ -11,7 +12,6 @@ recent_file: path: "core/struct/struct_string.h"
 recent_file: path: "core/ui/ui_clay_textbox.h"
 recent_file: path: "core/misc/misc_web.h"
 recent_file: path: "core/cross/cross_mem_arena_string_and_unicode.h"
-recent_file: path: "core/os/os_http.h"
 recent_file: path: "core/cross/cross_string_and_ranges.h"
 recent_file: path: "core/gfx/gfx_font_flow.h"
 recent_file: path: "core/mem/mem_arena.h"
@@ -123,4 +123,9 @@ type_view:
 {
   type: NewRangeR64
   expr: "rows($, $.min, $.max)"
+}
+type_view:
+{
+  type: Str16
+  expr: "rows($, array($.chars, $.length), $.length)"
 }

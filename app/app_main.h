@@ -43,8 +43,12 @@ plex HistoryItem
 	Str8Pair* contentItems;
 	
 	bool finished;
+	bool failed; //i.e. didn't connect or get a response, separate from responseStatusCode being a "failure"
+	Result failureReason;
+	u16 responseStatusCode;
 	Str8 response;
 	UiLargeText responseLargeText;
+	VarArray responseHeaders; //Str8Pair
 };
 
 typedef struct AppData AppData;

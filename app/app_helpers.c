@@ -331,4 +331,13 @@ void HighlightErrorsInTextbox(UiTextbox* tbox, StrErrorList* errorList)
 	}
 }
 
+Color32 GetColorForHttpStatusCode(u16 statusCode)
+{
+	if (statusCode >= 200 && statusCode < 300) { return MonokaiGreen; } //success
+	if (statusCode >= 300 && statusCode < 400) { return MonokaiYellow; } //redirection
+	if (statusCode >= 400 && statusCode < 500) { return MonokaiOrange; } //client errors
+	if (statusCode >= 500 && statusCode < 600) { return MonokaiMagenta; } //server errors
+	return MonokaiPurple;
+}
+
 #endif //BUILD_WITH_SOKOL_GFX

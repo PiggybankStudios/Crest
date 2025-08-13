@@ -240,6 +240,78 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
 }
 
 // +==============================+
+// |      RenderHistoryItem       |
+// +==============================+
+// void RenderHistoryItem(UiListView* list, void* item, uxx index, bool isSelected, bool isHovered)
+UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHistoryItem)
+{
+	UNUSED(isHovered);
+	uxx actualIndex = (app->history.length-1 - index);
+	HistoryItem* historyItem = VarArrayGet(HistoryItem, &app->history, actualIndex);
+	
+	Color32 statusColor = MonokaiGray1;
+	Str8 statusChar = StrLit(UNICODE_ELLIPSIS_STR);
+	if (historyItem->finished)
+	{
+		if (historyItem->failed)
+		{
+			statusColor = MonokaiMagenta;
+			statusChar = StrLit("X");
+		}
+		else if (historyItem->responseStatusCode >= 200 && historyItem->responseStatusCode < 300)
+		{
+			statusColor = MonokaiGreen;
+			statusChar = StrLit("+");
+		}
+		else
+		{
+			statusColor = MonokaiOrange;
+			statusChar = StrLit("!");
+		}
+	}
+	
+	CLAY({
+		.layout = {
+			.sizing = { .width = CLAY_SIZING_FIXED(UI_R32(10)), .height = CLAY_SIZING_FIXED(UI_R32(10)), },
+			.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+		},
+		.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
+		.backgroundColor = statusColor,
+	})
+	{
+		CLAY_TEXT(
+			statusChar,
+			CLAY_TEXT_CONFIG({
+				.fontId = app->clayUiBoldFontId,
+				.fontSize = (u16)app->uiFontSize,
+				.textColor = MonokaiDarkGray,
+				.wrapMode = CLAY_TEXT_WRAP_NONE,
+				.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+		}));
+	}
+	
+	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_FIXED(UI_R32(4)) } } } ) {}
+	
+	CLAY_TEXT(
+		AllocStr8(uiArena, historyItem->url),
+		CLAY_TEXT_CONFIG({
+			.fontId = app->clayUiFontId,
+			.fontSize = (u16)app->uiFontSize,
+			.textColor = isSelected ? MonokaiDarkGray : MonokaiWhite,
+			.wrapMode = CLAY_TEXT_WRAP_NONE,
+			.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+			.userData = { .contraction = TextContraction_EllipseLeft },
+	}));
+	
+	// CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
+	// Str8 btnIdStr = PrintInArenaStr(uiArena, "History_Item%llu_LoadBtn", actualIndex);
+	// if (ClayBtnStrEx(btnIdStr, StrLit("^"), Str8_Empty, true, false, false, nullptr))
+	// {
+	// 	//TODO: Implement me!
+	// } Clay__CloseElement();
+}
+
+// +==============================+
 // |         HttpCallback         |
 // +==============================+
 // void HttpCallback(plex HttpRequest* request)
@@ -264,10 +336,22 @@ HTTP_CALLBACK_DEF(HttpCallback)
 		request->responseBytes.length, Plural(request->responseBytes.length, "s")
 	);
 	history->finished = true;
+	history->failed = (request->error != Result_None && request->error != Result_Success);
+	history->failureReason = request->error;
 	Str8 responseStr = NewStr8(request->responseBytes.length, (char*)request->responseBytes.items);
 	NotNullStr(responseStr);
+	history->responseStatusCode = request->statusCode;
 	history->response = AllocStr8(history->arena, responseStr);
 	InitUiLargeText(stdHeap, history->response, &history->responseLargeText);
+	InitVarArrayWithInitial(Str8Pair, &history->responseHeaders, history->arena, request->numResponseHeaders);
+	for (uxx hIndex = 0; hIndex < request->numResponseHeaders; hIndex++)
+	{
+		Str8Pair* historyHeader = VarArrayAdd(Str8Pair, &history->responseHeaders);
+		NotNull(historyHeader);
+		ClearPointer(historyHeader);
+		historyHeader->key = AllocStr8(history->arena, request->responseHeaders[hIndex].key);
+		historyHeader->value = AllocStr8(history->arena, request->responseHeaders[hIndex].value);
+	}
 }
 
 // +==============================+
@@ -855,10 +939,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							ClearPointer(item);
 							item->idStr = PrintInArenaStr(uiArena, "History%llu", historyItem->id);
 							item->displayStr = AllocStr8(uiArena, historyItem->url);
-							item->font = &app->uiFont;
-							item->fontStyle = UI_FONT_STYLE;
-							item->fontSize = app->uiFontSize;
-							item->contraction = TextContraction_EllipseLeft;
+							item->render = RenderHistoryItem;
 						}
 					}
 					DoUiListView(&uiContext, &app->historyListView,
@@ -893,6 +974,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										.sizing = { .width = CLAY_SIZING_FIT(30, 0) },
 										.padding = { .left = UI_U16(12), .right = UI_U16(12), .top = UI_U16(4), .bottom = UI_U16(4) },
 										.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+										.childGap = UI_U16(4),
 									},
 									.backgroundColor = (app->currentResultTab == tab) ? MonokaiDarkGray : (isHovered ? MonokaiGray2 : MonokaiBack),
 									.cornerRadius = { .topLeft = UI_R32(3), .topRight = UI_R32(3) },
@@ -907,6 +989,38 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 											.wrapMode = CLAY_TEXT_WRAP_NONE,
 											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 									}));
+									
+									if (tab == ResultTab_Meta && app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+									{
+										HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
+										if (selectedHistory->finished)
+										{
+											if (selectedHistory->failed)
+											{
+												CLAY_TEXT(
+													StrLit("Failed"),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiMagenta,
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+											else
+											{
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "%u", selectedHistory->responseStatusCode),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = GetColorForHttpStatusCode(selectedHistory->responseStatusCode),
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+										}
+									}
 								}
 							}
 						}
@@ -936,7 +1050,19 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 										HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
 										if (selectedHistory->finished)
 										{
-											if (selectedHistory->response.length > 0)
+											if (selectedHistory->failed)
+											{
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "Request Failed: %s", GetResultStr(selectedHistory->failureReason)),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiMagenta,
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+											else if (selectedHistory->response.length > 0)
 											{
 												DoUiLargeTextView(&uiContext, &app->responseTextView,
 													CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0),
@@ -948,7 +1074,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													.layout = {
 														.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
 														.layoutDirection = CLAY_LEFT_TO_RIGHT,
-														.padding = CLAY_PADDING_ALL(UI_U16(4)),
+														.padding = { .left = UI_U16(4), .top = UI_U16(4) },
 														.childGap = UI_U16(8),
 														.childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
 													},
@@ -1043,6 +1169,89 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 									}
 								} break;
 								
+								case ResultTab_Meta:
+								{
+									if (app->historyListView.selectionActive && app->historyListView.selectionIndex < app->history.length)
+									{
+										HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
+										if (selectedHistory->finished)
+										{
+											if (selectedHistory->failed)
+											{
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "Request Failed: %s", GetResultStr(selectedHistory->failureReason)),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiMagenta,
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+											}
+											else
+											{
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "Status: %u", selectedHistory->responseStatusCode),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = GetColorForHttpStatusCode(selectedHistory->responseStatusCode),
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+												
+												CLAY_TEXT(
+													PrintInArenaStr(uiArena, "Response Headers (%llu):", selectedHistory->responseHeaders.length),
+													CLAY_TEXT_CONFIG({
+														.fontId = app->clayUiFontId,
+														.fontSize = (u16)app->uiFontSize,
+														.textColor = MonokaiWhite,
+														.wrapMode = CLAY_TEXT_WRAP_WORDS,
+														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+												}));
+												
+												VarArrayLoop(&selectedHistory->responseHeaders, hIndex)
+												{
+													VarArrayLoopGet(Str8Pair, header, &selectedHistory->responseHeaders, hIndex);
+													CLAY_TEXT(
+														PrintInArenaStr(uiArena, "  %.*s: %.*s", StrPrint(header->key), StrPrint(header->value)),
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiWhite,
+															.wrapMode = CLAY_TEXT_WRAP_WORDS,
+															.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+													}));
+												}
+											}
+										}
+										else
+										{
+											CLAY_TEXT(
+												StrLit("[In progress...]"),
+												CLAY_TEXT_CONFIG({
+													.fontId = app->clayUiFontId,
+													.fontSize = (u16)app->uiFontSize,
+													.textColor = MonokaiGray1,
+													.wrapMode = CLAY_TEXT_WRAP_WORDS,
+													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											}));
+										}
+									}
+									else
+									{
+										CLAY_TEXT(
+											StrLit("[Nothing selected]"),
+											CLAY_TEXT_CONFIG({
+												.fontId = app->clayUiFontId,
+												.fontSize = (u16)app->uiFontSize,
+												.textColor = MonokaiGray1,
+												.wrapMode = CLAY_TEXT_WRAP_WORDS,
+												.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+										}));
+									}
+								} break;
+								
 								default: 
 								{
 									CLAY_TEXT(
@@ -1061,6 +1270,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 				}
 			}
 			
+			#if 0
 			CLAY({ .id = CLAY_ID("StatusBar"),
 				.layout = {
 					.sizing = {.width = CLAY_SIZING_GROW(0), .height = UI_R32(fontHeight + 4) },
@@ -1080,6 +1290,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 						.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 				}));
 			}
+			#endif
 		}
 		TracyCZoneEnd(Zone_UI);
 		
