@@ -105,4 +105,27 @@ SET_WINDOW_ICON_DEF(Plat_SetWindowIcon)
 	sapp_set_icon(&iconDesc);
 }
 
+// +==============================+
+// |     Plat_SetCursorShape      |
+// +==============================+
+// void Plat_SetCursorShape(CursorShape shape)
+SET_CURSOR_SHAPE_DEF(Plat_SetCursorShape)
+{
+	// TODO: What is SAPP_MOUSECURSOR_ARROW?
+	// TODO: What is SAPP_MOUSECURSOR_CROSSHAIR?
+	// TODO: Support SAPP_MOUSECURSOR_RESIZE_ALL?
+	sapp_mouse_cursor sokolCursor = SAPP_MOUSECURSOR_DEFAULT;
+	switch (shape)
+	{
+		case CursorShape_Default: sokolCursor = SAPP_MOUSECURSOR_DEFAULT; break;
+		case CursorShape_Point: sokolCursor = SAPP_MOUSECURSOR_POINTING_HAND; break;
+		case CursorShape_IBeam: sokolCursor = SAPP_MOUSECURSOR_IBEAM; break;
+		case CursorShape_ResizeHori: sokolCursor = SAPP_MOUSECURSOR_RESIZE_EW; break;
+		case CursorShape_ResizeVert: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NS; break;
+		case CursorShape_ResizeDiagNwSe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NWSE; break;
+		case CursorShape_ResizeDiagSwNe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NESW; break;
+	}
+	sapp_set_mouse_cursor(sokolCursor);
+}
+
 #endif //BUILD_WITH_SOKOL_APP

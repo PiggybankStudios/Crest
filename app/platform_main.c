@@ -242,6 +242,7 @@ int main()
 	platform->SetMouseCursorType = Plat_SetMouseCursorType;
 	platform->SetWindowTitle = Plat_SetWindowTitle;
 	platform->SetWindowIcon = Plat_SetWindowIcon;
+	platform->SetCursorShape = Plat_SetCursorShape;
 	#endif
 	
 	#if BUILD_INTO_SINGLE_UNIT

@@ -70,6 +70,8 @@ struct AppData
 	UiTextbox* focusedTextbox;
 	HttpVerb httpVerb;
 	
+	UiResizableSplit horizontalSplit;
+	UiResizableSplit verticalSplit;
 	UiTextbox urlTextbox;
 	bool urlHasErrors;
 	UiListView headersListView;
