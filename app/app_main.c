@@ -138,9 +138,9 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	app->clayUiFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE);
 	app->clayUiBoldFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE|FontStyleFlag_Bold);
 	
-	// InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://catfact.ninja/fact"), &app->urlTextbox);
 	InitUiResizableSplit(stdHeap, StrLit("InputSubmitSplit"), false, 16, 0.40f, &app->verticalSplit);
-	InitUiResizableSplit(stdHeap, StrLit("HaedersContentSplit"), true, 4, 0.33f, &app->horizontalSplit);
+	InitUiResizableSplit(stdHeap, StrLit("HeadersContentSplit"), true, 4, 0.33f, &app->horizontalSplit);
+	// InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://catfact.ninja/fact"), &app->urlTextbox);
 	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://echo.free.beeceptor.com/"), &app->urlTextbox);
 	InitUiListView(stdHeap, StrLit("HeadersListView"), &app->headersListView);
 	InitUiTextbox(stdHeap, StrLit("HeaderKeyTextbox"), StrLit(""), &app->headerKeyTextbox);
@@ -149,6 +149,8 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	InitUiTextbox(stdHeap, StrLit("ContentKeyTextbox"), StrLit(""), &app->contentKeyTextbox);
 	InitUiTextbox(stdHeap, StrLit("ContentValueTextbox"), StrLit(""), &app->contentValueTextbox);
 	InitUiListView(stdHeap, StrLit("HistoryListView"), &app->historyListView);
+	app->historyListView.itemPaddingLeft = 0; app->historyListView.itemPaddingRight = 0;
+	app->historyListView.itemPaddingTop = 0; app->historyListView.itemPaddingBottom = 0;
 	
 	InitUiLargeTextView(stdHeap, StrLit("ResponseTextView"), &app->responseTextView);
 	app->responseTextView.wordWrapEnabled = true;
@@ -251,59 +253,47 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHistoryItem)
 	uxx actualIndex = (app->history.length-1 - index);
 	HistoryItem* historyItem = VarArrayGet(HistoryItem, &app->history, actualIndex);
 	
-	Color32 statusColor = MonokaiGray1;
-	Str8 statusChar = StrLit(UNICODE_ELLIPSIS_STR);
+	Color32 statusColor = Transparent;
 	if (historyItem->finished)
 	{
 		if (historyItem->failed)
 		{
 			statusColor = MonokaiMagenta;
-			statusChar = StrLit("X");
 		}
-		else if (historyItem->responseStatusCode >= 200 && historyItem->responseStatusCode < 300)
-		{
-			statusColor = MonokaiGreen;
-			statusChar = StrLit("+");
-		}
-		else
+		else if (historyItem->responseStatusCode < 200 || historyItem->responseStatusCode >= 300)
 		{
 			statusColor = MonokaiOrange;
-			statusChar = StrLit("!");
 		}
+	}
+	
+	if (statusColor.a != 0)
+	{
+		CLAY({
+			.layout = {
+				.sizing = { .width = CLAY_SIZING_FIXED(UI_R32(6)), .height = CLAY_SIZING_GROW(0) }
+			},
+			.backgroundColor = statusColor,
+			.border = { .width = { .right = 1 }, .color = MonokaiDarkGray },
+		}) { }
 	}
 	
 	CLAY({
 		.layout = {
-			.sizing = { .width = CLAY_SIZING_FIXED(UI_R32(10)), .height = CLAY_SIZING_FIXED(UI_R32(10)), },
-			.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
-		},
-		.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(5)),
-		.backgroundColor = statusColor,
+			.padding = { .left = UI_U16(statusColor.a != 0 ? 4 : 0), .right = UI_U16(2), .top = UI_U16(2), .bottom = UI_U16(2) },
+		}
 	})
 	{
 		CLAY_TEXT(
-			statusChar,
+			AllocStr8(uiArena, historyItem->url),
 			CLAY_TEXT_CONFIG({
-				.fontId = app->clayUiBoldFontId,
+				.fontId = app->clayUiFontId,
 				.fontSize = (u16)app->uiFontSize,
-				.textColor = MonokaiDarkGray,
+				.textColor = isSelected ? MonokaiDarkGray : MonokaiWhite,
 				.wrapMode = CLAY_TEXT_WRAP_NONE,
-				.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+				.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
+				.userData = { .contraction = TextContraction_EllipseLeft },
 		}));
 	}
-	
-	CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_FIXED(UI_R32(4)) } } } ) {}
-	
-	CLAY_TEXT(
-		AllocStr8(uiArena, historyItem->url),
-		CLAY_TEXT_CONFIG({
-			.fontId = app->clayUiFontId,
-			.fontSize = (u16)app->uiFontSize,
-			.textColor = isSelected ? MonokaiDarkGray : MonokaiWhite,
-			.wrapMode = CLAY_TEXT_WRAP_NONE,
-			.textAlignment = CLAY_TEXT_ALIGN_SHRINK,
-			.userData = { .contraction = TextContraction_EllipseLeft },
-	}));
 	
 	// CLAY({ .layout = { .sizing = { .width=CLAY_SIZING_GROW(0) } } } ) {}
 	// Str8 btnIdStr = PrintInArenaStr(uiArena, "History_Item%llu_LoadBtn", actualIndex);
