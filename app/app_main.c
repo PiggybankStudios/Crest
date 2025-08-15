@@ -139,6 +139,8 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	app->clayUiBoldFontId = AddClayUIRendererFont(&app->clay, &app->uiFont, UI_FONT_STYLE|FontStyleFlag_Bold);
 	
 	// InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://catfact.ninja/fact"), &app->urlTextbox);
+	InitUiResizableSplit(stdHeap, StrLit("InputSubmitSplit"), false, 16, 0.40f, &app->verticalSplit);
+	InitUiResizableSplit(stdHeap, StrLit("HaedersContentSplit"), true, 4, 0.33f, &app->horizontalSplit);
 	InitUiTextbox(stdHeap, StrLit("UrlTextbox"), StrLit("https://echo.free.beeceptor.com/"), &app->urlTextbox);
 	InitUiListView(stdHeap, StrLit("HeadersListView"), &app->headersListView);
 	InitUiTextbox(stdHeap, StrLit("HeaderKeyTextbox"), StrLit(""), &app->headerKeyTextbox);
@@ -580,10 +582,11 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					}
 				}
 				
-				r32 splitPercent = 0.40f;
-				DoUiResizableSplitInterleaved(section, &uiContext, StrLit("InputSubmitSplit"), false, UI_U16(16), &splitPercent)
+				app->verticalSplit.minFirstSplitSize = UI_R32(150);
+				app->verticalSplit.minSecondSplitSize = UI_R32(70);
+				DoUiResizableSplitInterleaved(verticalSection, &uiContext, &app->verticalSplit)
 				{
-					DoUiResizableSplitSection(section, Top)
+					DoUiResizableSplitSection(verticalSection, Top)
 					{
 						CLAY({ .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }, .layoutDirection = CLAY_TOP_TO_BOTTOM } })
 						{
@@ -592,215 +595,162 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							// +==============================+
 							CLAY({ .id = CLAY_ID("InputsRow"), .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }, .layoutDirection = CLAY_LEFT_TO_RIGHT } })
 							{
-								//TODO: .childGap = UI_U16(8),
-								// +==============================+
-								// |         Headers List         |
-								// +==============================+
-								CLAY({ .id = CLAY_ID("HeaderCol"),
-									.layout = {
-										.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
-										.layoutDirection = CLAY_TOP_TO_BOTTOM,
-									},
-								})
-								{
-									CLAY_TEXT(
-										StrLit("Headers:"),
-										CLAY_TEXT_CONFIG({
-											.fontId = app->clayUiBoldFontId,
-											.fontSize = (u16)app->uiFontSize,
-											.textColor = MonokaiWhite,
-											.wrapMode = CLAY_TEXT_WRAP_NONE,
-											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-									}));
-									
-									{
-										UiListViewItem* headerListItems = nullptr;
-										if (app->httpHeaders.length > 0)
-										{
-											headerListItems = AllocArray(UiListViewItem, scratch, app->httpHeaders.length);
-											NotNull(headerListItems);
-											VarArrayLoop(&app->httpHeaders, hIndex)
-											{
-												VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
-												UiListViewItem* item = &headerListItems[hIndex];
-												ClearPointer(item);
-												item->idStr = AllocStr8(scratch, header->key);
-												item->render = RenderHeaderItem;
-												item->contextPntr = (void*)header;
-											}
-										}
-										app->headersListView.contextPntr = (void*)&app->httpHeaders;
-										app->removedHeaderThisFrame = false;
-										DoUiListView(&uiContext, &app->headersListView,
-											CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-											app->httpHeaders.length, headerListItems);
-										
-										if (app->headersListView.selectionChanged)
-										{
-											app->headersListView.selectionChanged = false;
-											if (app->headersListView.selectionActive && !app->removedHeaderThisFrame)
-											{
-												if (!app->editedHeaderInputSinceFilled || (app->headerKeyTextbox.text.length == 0 && app->headerValueTextbox.text.length == 0))
-												{
-													Str8Pair* header = VarArrayGet(Str8Pair, &app->httpHeaders, app->headersListView.selectionIndex);
-													UiTextboxSetText(&app->headerKeyTextbox, header->key);
-													UiTextboxSetText(&app->headerValueTextbox, header->value);
-													app->headerKeyTextbox.textChanged = false;
-													app->headerValueTextbox.textChanged = false;
-													app->editedHeaderInputSinceFilled = false;
-												}
-											}
-											else if (!app->headersListView.selectionActive && !app->editedHeaderInputSinceFilled)
-											{
-												UiTextboxClear(&app->headerKeyTextbox);
-												UiTextboxClear(&app->headerValueTextbox);
-												app->headerKeyTextbox.textChanged = false;
-												app->headerValueTextbox.textChanged = false;
-											}
-										}
-									}
-									
-									CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-									{
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-										{
-											CLAY_TEXT(
-												StrLit("Key:"),
-												CLAY_TEXT_CONFIG({
-													.fontId = app->clayUiBoldFontId,
-													.fontSize = (u16)app->uiFontSize,
-													.textColor = MonokaiWhite,
-													.wrapMode = CLAY_TEXT_WRAP_NONE,
-													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											}));
-											
-											DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-											
-											StrErrorList errorList = NewStrErrorList(scratch, 16);
-											GetHttpHeaderKeyErrors(app->headerKeyTextbox.text, &errorList);
-											DoErrorHoverable(&uiContext, app->headerKeyTextbox.idStr, &errorList, false);
-											app->headerKeyHasErrors = (errorList.numErrors > 0);
-											
-											if (app->headerKeyTextbox.textChanged)
-											{
-												app->headerKeyTextbox.textChanged = false;
-												app->editedHeaderInputSinceFilled = true;
-												HighlightErrorsInTextbox(&app->headerKeyTextbox, &errorList);
-											}
-										}
-										
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-										{
-											CLAY_TEXT(
-												StrLit("Value:"),
-												CLAY_TEXT_CONFIG({
-													.fontId = app->clayUiBoldFontId,
-													.fontSize = (u16)app->uiFontSize,
-													.textColor = MonokaiWhite,
-													.wrapMode = CLAY_TEXT_WRAP_NONE,
-													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											}));
-											
-											DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-											
-											StrErrorList errorList = NewStrErrorList(scratch, 16);
-											GetHttpHeaderValueErrors(app->headerValueTextbox.text, &errorList);
-											DoErrorHoverable(&uiContext, app->headerValueTextbox.idStr, &errorList, false);
-											app->headerValueHasErrors = (errorList.numErrors > 0);
-											
-											if (app->headerValueTextbox.textChanged)
-											{
-												app->headerValueTextbox.textChanged = false;
-												app->editedHeaderInputSinceFilled = true;
-												HighlightErrorsInTextbox(&app->headerValueTextbox, &errorList);
-											}
-										}
-										
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) }, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER } } })
-										{
-											CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
-											
-											if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, (app->headerKeyHasErrors || app->headerValueHasErrors), false, nullptr))
-											{
-												addHeader = true;
-											} Clay__CloseElement();
-										}
-									}
-								}
 								
-								// +==============================+
-								// |         Content List         |
-								// +==============================+
-								CLAY({ .id = CLAY_ID("ContentCol"),
-									.layout = {
-										.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
-										.layoutDirection = CLAY_TOP_TO_BOTTOM,
-									},
-								})
+								app->horizontalSplit.minFirstSplitSize = UI_R32(100);
+								app->horizontalSplit.minSecondSplitSize = UI_R32(100);
+								DoUiResizableSplitInterleaved(horizontalSection, &uiContext, &app->horizontalSplit)
 								{
-									CLAY_TEXT(
-										StrLit("Content:"),
-										CLAY_TEXT_CONFIG({
-											.fontId = app->clayUiBoldFontId,
-											.fontSize = (u16)app->uiFontSize,
-											.textColor = MonokaiWhite,
-											.wrapMode = CLAY_TEXT_WRAP_NONE,
-											.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-									}));
-									
+									DoUiResizableSplitSection(horizontalSection, Left)
 									{
-										UiListViewItem* contentListItems = nullptr;
-										if (app->httpContent.length > 0)
+										// +==============================+
+										// |         Headers List         |
+										// +==============================+
+										// CLAY({ .id = CLAY_ID("HeaderCol"),
+										// 	.layout = {
+										// 		.sizing = { .width = CLAY_SIZING_PERCENT(0.40f), .height = CLAY_SIZING_GROW(0) },
+										// 		.layoutDirection = CLAY_TOP_TO_BOTTOM,
+										// 	},
+										// })
 										{
-											contentListItems = AllocArray(UiListViewItem, scratch, app->httpContent.length);
-											NotNull(contentListItems);
-											VarArrayLoop(&app->httpContent, cIndex)
+											CLAY_TEXT(
+												StrLit("Headers:"),
+												CLAY_TEXT_CONFIG({
+													.fontId = app->clayUiBoldFontId,
+													.fontSize = (u16)app->uiFontSize,
+													.textColor = MonokaiWhite,
+													.wrapMode = CLAY_TEXT_WRAP_NONE,
+													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+											}));
+											
 											{
-												VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
-												UiListViewItem* item = &contentListItems[cIndex];
-												ClearPointer(item);
-												item->idStr = AllocStr8(scratch, contentItem->key);
-												item->render = RenderContentItem;
-												item->contextPntr = (void*)contentItem;
-											}
-										}
-										app->contentListView.contextPntr = (void*)&app->httpContent;
-										app->removedContentThisFrame = false;
-										DoUiListView(&uiContext, &app->contentListView,
-											CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
-											app->httpContent.length, contentListItems);
-										
-										if (app->contentListView.selectionChanged)
-										{
-											app->contentListView.selectionChanged = false;
-											if (app->contentListView.selectionActive && !app->removedContentThisFrame)
-											{
-												if (!app->editedContentInputSinceFilled || (app->contentKeyTextbox.text.length == 0 && app->contentValueTextbox.text.length == 0))
+												UiListViewItem* headerListItems = nullptr;
+												if (app->httpHeaders.length > 0)
 												{
-													Str8Pair* contentItem = VarArrayGet(Str8Pair, &app->httpContent, app->contentListView.selectionIndex);
-													UiTextboxSetText(&app->contentKeyTextbox, contentItem->key);
-													UiTextboxSetText(&app->contentValueTextbox, contentItem->value);
-													app->contentKeyTextbox.textChanged = false;
-													app->contentValueTextbox.textChanged = false;
-													app->editedContentInputSinceFilled = false;
+													headerListItems = AllocArray(UiListViewItem, scratch, app->httpHeaders.length);
+													NotNull(headerListItems);
+													VarArrayLoop(&app->httpHeaders, hIndex)
+													{
+														VarArrayLoopGet(Str8Pair, header, &app->httpHeaders, hIndex);
+														UiListViewItem* item = &headerListItems[hIndex];
+														ClearPointer(item);
+														item->idStr = AllocStr8(scratch, header->key);
+														item->render = RenderHeaderItem;
+														item->contextPntr = (void*)header;
+													}
+												}
+												app->headersListView.contextPntr = (void*)&app->httpHeaders;
+												app->removedHeaderThisFrame = false;
+												DoUiListView(&uiContext, &app->headersListView,
+													CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+													app->httpHeaders.length, headerListItems);
+												
+												if (app->headersListView.selectionChanged)
+												{
+													app->headersListView.selectionChanged = false;
+													if (app->headersListView.selectionActive && !app->removedHeaderThisFrame)
+													{
+														if (!app->editedHeaderInputSinceFilled || (app->headerKeyTextbox.text.length == 0 && app->headerValueTextbox.text.length == 0))
+														{
+															Str8Pair* header = VarArrayGet(Str8Pair, &app->httpHeaders, app->headersListView.selectionIndex);
+															UiTextboxSetText(&app->headerKeyTextbox, header->key);
+															UiTextboxSetText(&app->headerValueTextbox, header->value);
+															app->headerKeyTextbox.textChanged = false;
+															app->headerValueTextbox.textChanged = false;
+															app->editedHeaderInputSinceFilled = false;
+														}
+													}
+													else if (!app->headersListView.selectionActive && !app->editedHeaderInputSinceFilled)
+													{
+														UiTextboxClear(&app->headerKeyTextbox);
+														UiTextboxClear(&app->headerValueTextbox);
+														app->headerKeyTextbox.textChanged = false;
+														app->headerValueTextbox.textChanged = false;
+													}
 												}
 											}
-											else if (!app->contentListView.selectionActive && !app->editedContentInputSinceFilled)
+											
+											CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
 											{
-												UiTextboxClear(&app->contentKeyTextbox);
-												UiTextboxClear(&app->contentValueTextbox);
-												app->contentKeyTextbox.textChanged = false;
-												app->contentValueTextbox.textChanged = false;
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+												{
+													CLAY_TEXT(
+														StrLit("Key:"),
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiBoldFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiWhite,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+													}));
+													
+													DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+													
+													StrErrorList errorList = NewStrErrorList(scratch, 16);
+													GetHttpHeaderKeyErrors(app->headerKeyTextbox.text, &errorList);
+													DoErrorHoverable(&uiContext, app->headerKeyTextbox.idStr, &errorList, false);
+													app->headerKeyHasErrors = (errorList.numErrors > 0);
+													
+													if (app->headerKeyTextbox.textChanged)
+													{
+														app->headerKeyTextbox.textChanged = false;
+														app->editedHeaderInputSinceFilled = true;
+														HighlightErrorsInTextbox(&app->headerKeyTextbox, &errorList);
+													}
+												}
+												
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+												{
+													CLAY_TEXT(
+														StrLit("Value:"),
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiBoldFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiWhite,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+													}));
+													
+													DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+													
+													StrErrorList errorList = NewStrErrorList(scratch, 16);
+													GetHttpHeaderValueErrors(app->headerValueTextbox.text, &errorList);
+													DoErrorHoverable(&uiContext, app->headerValueTextbox.idStr, &errorList, false);
+													app->headerValueHasErrors = (errorList.numErrors > 0);
+													
+													if (app->headerValueTextbox.textChanged)
+													{
+														app->headerValueTextbox.textChanged = false;
+														app->editedHeaderInputSinceFilled = true;
+														HighlightErrorsInTextbox(&app->headerValueTextbox, &errorList);
+													}
+												}
+												
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) }, .childAlignment = { .y = CLAY_ALIGN_Y_CENTER } } })
+												{
+													CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
+													
+													if (ClayBtnStrEx(StrLit("HeaderAddBtn"), StrLit("Add"), Str8_Empty, canAddHeader, (app->headerKeyHasErrors || app->headerValueHasErrors), false, nullptr))
+													{
+														addHeader = true;
+													} Clay__CloseElement();
+												}
 											}
 										}
 									}
-									
-									CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+									DoUiResizableSplitSection(horizontalSection, Right)
 									{
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+										// +==============================+
+										// |         Content List         |
+										// +==============================+
+										// CLAY({ .id = CLAY_ID("ContentCol"),
+										// 	.layout = {
+										// 		.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+										// 		.layoutDirection = CLAY_TOP_TO_BOTTOM,
+										// 	},
+										// })
 										{
 											CLAY_TEXT(
-												StrLit("Key:"),
+												StrLit("Content:"),
 												CLAY_TEXT_CONFIG({
 													.fontId = app->clayUiBoldFontId,
 													.fontSize = (u16)app->uiFontSize,
@@ -809,42 +759,105 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 											}));
 											
-											DoUiTextbox(&uiContext, &app->contentKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-											if (app->contentKeyTextbox.textChanged)
 											{
-												app->contentKeyTextbox.textChanged = false;
-												app->editedContentInputSinceFilled = true;
+												UiListViewItem* contentListItems = nullptr;
+												if (app->httpContent.length > 0)
+												{
+													contentListItems = AllocArray(UiListViewItem, scratch, app->httpContent.length);
+													NotNull(contentListItems);
+													VarArrayLoop(&app->httpContent, cIndex)
+													{
+														VarArrayLoopGet(Str8Pair, contentItem, &app->httpContent, cIndex);
+														UiListViewItem* item = &contentListItems[cIndex];
+														ClearPointer(item);
+														item->idStr = AllocStr8(scratch, contentItem->key);
+														item->render = RenderContentItem;
+														item->contextPntr = (void*)contentItem;
+													}
+												}
+												app->contentListView.contextPntr = (void*)&app->httpContent;
+												app->removedContentThisFrame = false;
+												DoUiListView(&uiContext, &app->contentListView,
+													CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
+													app->httpContent.length, contentListItems);
+												
+												if (app->contentListView.selectionChanged)
+												{
+													app->contentListView.selectionChanged = false;
+													if (app->contentListView.selectionActive && !app->removedContentThisFrame)
+													{
+														if (!app->editedContentInputSinceFilled || (app->contentKeyTextbox.text.length == 0 && app->contentValueTextbox.text.length == 0))
+														{
+															Str8Pair* contentItem = VarArrayGet(Str8Pair, &app->httpContent, app->contentListView.selectionIndex);
+															UiTextboxSetText(&app->contentKeyTextbox, contentItem->key);
+															UiTextboxSetText(&app->contentValueTextbox, contentItem->value);
+															app->contentKeyTextbox.textChanged = false;
+															app->contentValueTextbox.textChanged = false;
+															app->editedContentInputSinceFilled = false;
+														}
+													}
+													else if (!app->contentListView.selectionActive && !app->editedContentInputSinceFilled)
+													{
+														UiTextboxClear(&app->contentKeyTextbox);
+														UiTextboxClear(&app->contentValueTextbox);
+														app->contentKeyTextbox.textChanged = false;
+														app->contentValueTextbox.textChanged = false;
+													}
+												}
 											}
-										}
-										
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
-										{
-											CLAY_TEXT(
-												StrLit("Value:"),
-												CLAY_TEXT_CONFIG({
-													.fontId = app->clayUiBoldFontId,
-													.fontSize = (u16)app->uiFontSize,
-													.textColor = MonokaiWhite,
-													.wrapMode = CLAY_TEXT_WRAP_NONE,
-													.textAlignment = CLAY_TEXT_ALIGN_LEFT,
-											}));
 											
-											DoUiTextbox(&uiContext, &app->contentValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
-											if (app->contentValueTextbox.textChanged)
+											CLAY({ .layout = { .layoutDirection = CLAY_LEFT_TO_RIGHT, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
 											{
-												app->contentValueTextbox.textChanged = false;
-												app->editedContentInputSinceFilled = true;
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+												{
+													CLAY_TEXT(
+														StrLit("Key:"),
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiBoldFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiWhite,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+													}));
+													
+													DoUiTextbox(&uiContext, &app->contentKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+													if (app->contentKeyTextbox.textChanged)
+													{
+														app->contentKeyTextbox.textChanged = false;
+														app->editedContentInputSinceFilled = true;
+													}
+												}
+												
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .width=CLAY_SIZING_GROW(0) } } })
+												{
+													CLAY_TEXT(
+														StrLit("Value:"),
+														CLAY_TEXT_CONFIG({
+															.fontId = app->clayUiBoldFontId,
+															.fontSize = (u16)app->uiFontSize,
+															.textColor = MonokaiWhite,
+															.wrapMode = CLAY_TEXT_WRAP_NONE,
+															.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+													}));
+													
+													DoUiTextbox(&uiContext, &app->contentValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+													if (app->contentValueTextbox.textChanged)
+													{
+														app->contentValueTextbox.textChanged = false;
+														app->editedContentInputSinceFilled = true;
+													}
+												}
+												
+												CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) } } })
+												{
+													CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
+													
+													if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, false, nullptr))
+													{
+														addContent = true;
+													} Clay__CloseElement();
+												}
 											}
-										}
-										
-										CLAY({ .layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = { .height=CLAY_SIZING_GROW(0) } } })
-										{
-											CLAY({ .layout = { .sizing = { .height=CLAY_SIZING_FIXED(fontHeight) } } }) { }
-											
-											if (ClayBtnStrEx(StrLit("ContentAddBtn"), StrLit("Add"), Str8_Empty, canAddContent, false, false, nullptr))
-											{
-												addContent = true;
-											} Clay__CloseElement();
 										}
 									}
 								}
@@ -885,7 +898,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 					// +==============================+
 					// |          Result Row          |
 					// +==============================+
-					DoUiResizableSplitSection(section, Bottom)
+					DoUiResizableSplitSection(verticalSection, Bottom)
 					{
 						// +==============================+
 						// |         History List         |
