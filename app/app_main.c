@@ -1162,22 +1162,51 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 													HistoryItem* selectedHistory = VarArrayGet(HistoryItem, &app->history, (app->history.length-1) - app->historyListView.selectionIndex);
 													if (selectedHistory->finished)
 													{
-														if (selectedHistory->failed)
+														CLAY_TEXT(
+															StrLit("Request:"),
+															CLAY_TEXT_CONFIG({
+																.fontId = app->clayUiBoldFontId,
+																.fontSize = (u16)app->uiFontSize,
+																.textColor = MonokaiWhite,
+																.wrapMode = CLAY_TEXT_WRAP_WORDS,
+																.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+														}));
+														
+														CLAY_TEXT(
+															PrintInArenaStr(uiArena, "  %s %.*s", GetHttpVerbStr(selectedHistory->verb), StrPrint(selectedHistory->url)),
+															CLAY_TEXT_CONFIG({
+																.fontId = app->clayUiFontId,
+																.fontSize = (u16)app->uiFontSize,
+																.textColor = MonokaiWhite,
+																.wrapMode = CLAY_TEXT_WRAP_WORDS,
+																.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+														}));
+														
+														CLAY_TEXT(
+															PrintInArenaStr(uiArena, "  %s%s", selectedHistory->failed ? "Failure: " : "Success", selectedHistory->failed ? GetResultStr(selectedHistory->failureReason) : ""),
+															CLAY_TEXT_CONFIG({
+																.fontId = app->clayUiFontId,
+																.fontSize = (u16)app->uiFontSize,
+																.textColor = selectedHistory->failed ? MonokaiMagenta : MonokaiGreen,
+																.wrapMode = CLAY_TEXT_WRAP_WORDS,
+																.textAlignment = CLAY_TEXT_ALIGN_LEFT,
+														}));
+														
+														CLAY({ .layout = { .sizing = { .height = CLAY_SIZING_FIXED(UI_R32(15)) } } }) { }
+														
+														if (!selectedHistory->failed)
 														{
 															CLAY_TEXT(
-																PrintInArenaStr(uiArena, "Request Failed: %s", GetResultStr(selectedHistory->failureReason)),
+																StrLit("Response:"),
 																CLAY_TEXT_CONFIG({
-																	.fontId = app->clayUiFontId,
+																	.fontId = app->clayUiBoldFontId,
 																	.fontSize = (u16)app->uiFontSize,
-																	.textColor = MonokaiMagenta,
+																	.textColor = MonokaiWhite,
 																	.wrapMode = CLAY_TEXT_WRAP_WORDS,
 																	.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 															}));
-														}
-														else
-														{
 															CLAY_TEXT(
-																PrintInArenaStr(uiArena, "Status: %u", selectedHistory->responseStatusCode),
+																PrintInArenaStr(uiArena, "  Status: %u", selectedHistory->responseStatusCode),
 																CLAY_TEXT_CONFIG({
 																	.fontId = app->clayUiFontId,
 																	.fontSize = (u16)app->uiFontSize,
@@ -1187,7 +1216,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 															}));
 															
 															CLAY_TEXT(
-																PrintInArenaStr(uiArena, "Response Headers (%llu):", selectedHistory->responseHeaders.length),
+																PrintInArenaStr(uiArena, "  Headers (%llu):", selectedHistory->responseHeaders.length),
 																CLAY_TEXT_CONFIG({
 																	.fontId = app->clayUiFontId,
 																	.fontSize = (u16)app->uiFontSize,
@@ -1200,7 +1229,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 															{
 																VarArrayLoopGet(Str8Pair, header, &selectedHistory->responseHeaders, hIndex);
 																CLAY_TEXT(
-																	PrintInArenaStr(uiArena, "  %.*s: %.*s", StrPrint(header->key), StrPrint(header->value)),
+																	PrintInArenaStr(uiArena, "    %.*s: %.*s", StrPrint(header->key), StrPrint(header->value)),
 																	CLAY_TEXT_CONFIG({
 																		.fontId = app->clayUiFontId,
 																		.fontSize = (u16)app->uiFontSize,
@@ -1467,6 +1496,12 @@ EXPORT_FUNC APP_CLOSING_DEF(AppClosing)
 	#if BUILD_WITH_IMGUI
 	igSaveIniSettingsToDisk(app->imgui->io->IniFilename);
 	#endif
+	
+	if (app->historyChanged)
+	{
+		SaveHistory(&app->history);
+		app->historyChanged = false;
+	}
 	
 	ScratchEnd(scratch);
 	ScratchEnd(scratch2);
