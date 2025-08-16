@@ -72,6 +72,7 @@ struct AppData
 	
 	UiResizableSplit horizontalSplit;
 	UiResizableSplit verticalSplit;
+	UiResizableSplit historyResponseSplit;
 	UiTextbox urlTextbox;
 	bool urlHasErrors;
 	UiListView headersListView;
