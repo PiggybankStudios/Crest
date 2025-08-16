@@ -1,5 +1,6 @@
 // raddbg 0.9.20 project file
 
+recent_file: path: "app/app_save.c"
 recent_file: path: "core/gfx/gfx_system.h"
 recent_file: path: "core/third_party/sokol/sokol_gfx.h"
 recent_file: path: "core/gfx/gfx_clay_renderer.h"

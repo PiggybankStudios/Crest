@@ -340,4 +340,34 @@ Color32 GetColorForHttpStatusCode(u16 statusCode)
 	return MonokaiPurple;
 }
 
+void FreeHistoryItem(HistoryItem* item)
+{
+	NotNull(item);
+	if (item->arena != nullptr)
+	{
+		for (uxx hIndex = 0; hIndex < item->numHeaders; hIndex++)
+		{
+			FreeStr8(item->arena, &item->headers[hIndex].key);
+			FreeStr8(item->arena, &item->headers[hIndex].value);
+		}
+		if (item->headers != nullptr) { FreeArray(Str8Pair, item->arena, item->numHeaders, item->headers); }
+		for (uxx cIndex = 0; cIndex < item->numContentItems; cIndex++)
+		{
+			FreeStr8(item->arena, &item->contentItems[cIndex].key);
+			FreeStr8(item->arena, &item->contentItems[cIndex].value);
+		}
+		if (item->contentItems != nullptr) { FreeArray(Str8Pair, item->arena, item->numContentItems, item->contentItems); }
+		FreeStr8(item->arena, &item->response);
+		FreeUiLargeText(&item->responseLargeText);
+		VarArrayLoop(&item->responseHeaders, hIndex)
+		{
+			VarArrayLoopGet(Str8Pair, header, &item->responseHeaders, hIndex);
+			FreeStr8(item->arena, &header->key);
+			FreeStr8(item->arena, &header->value);
+		}
+		FreeVarArray(&item->responseHeaders);
+	}
+	ClearPointer(item);
+}
+
 #endif //BUILD_WITH_SOKOL_GFX

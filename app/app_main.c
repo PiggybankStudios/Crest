@@ -52,6 +52,7 @@ static Arena* stdHeap = nullptr;
 // +--------------------------------------------------------------+
 #include "app_resources.c"
 #include "app_helpers.c"
+#include "app_save.c"
 
 // +==============================+
 // |           DllMain            |
@@ -160,6 +161,7 @@ EXPORT_FUNC APP_INIT_DEF(AppInit)
 	InitVarArray(Str8Pair, &app->httpContent, stdHeap);
 	InitVarArray(HistoryItem, &app->history, stdHeap);
 	app->nextHistoryId = 1;
+	LoadHistory(stdHeap, &app->history, &app->nextHistoryId);
 	
 	app->httpVerb = HttpVerb_POST;
 	app->currentResultTab = ResultTab_Raw;
@@ -345,6 +347,7 @@ HTTP_CALLBACK_DEF(HttpCallback)
 		historyHeader->key = AllocStr8(history->arena, request->responseHeaders[hIndex].key);
 		historyHeader->value = AllocStr8(history->arena, request->responseHeaders[hIndex].value);
 	}
+	app->historyChanged = true;
 }
 
 // +==============================+
@@ -381,6 +384,13 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	// +==============================+
 	TracyCZoneN(Zone_Update, "Update", true);
 	{
+		if (app->historyChanged && (app->lastHistorySaveTime == 0 || TimeSinceBy(appIn->programTime, app->lastHistorySaveTime) >= SAVE_HISTORY_DELAY))
+		{
+			SaveHistory(&app->history);
+			app->lastHistorySaveTime = appIn->programTime;
+			app->historyChanged = false;
+		}
+		
 		// +==================================+
 		// | Handle Ctrl+Plus/Minus/0/Scroll  |
 		// +==================================+
@@ -905,6 +915,19 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 								DoUiListView(&uiContext, &app->historyListView,
 									CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0), 0,
 									app->history.length, historyListItems);
+								
+								if (ClayBtnStrEx(StrLit("ClearHistory"), StrLit("Clear"), Str8_Empty, (app->history.length > 0), false, true, nullptr))
+								{
+									VarArrayLoop(&app->history, hIndex)
+									{
+										VarArrayLoopGet(HistoryItem, item, &app->history, hIndex);
+										FreeHistoryItem(item);
+									}
+									VarArrayClear(&app->history);
+									app->historyListView.selectionActive = false;
+									app->nextHistoryId = 1;
+									app->historyChanged = true;
+								} Clay__CloseElement();
 							}
 							
 							// +==============================+
@@ -1418,6 +1441,8 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			app->historyListView.selectionActive = true;
 			FreeStr8(app->historyListView.arena, &app->historyListView.selectedIdStr);
 			app->historyListView.selectedIdStr = PrintInArenaStr(app->historyListView.arena, "History%llu", historyItem->id);
+			
+			app->historyChanged = true;
 		}
 	}
 	

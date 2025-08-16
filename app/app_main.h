@@ -95,6 +95,8 @@ struct AppData
 	
 	u64 nextHistoryId;
 	VarArray history; //HistoryItem
+	bool historyChanged;
+	uxx lastHistorySaveTime;
 	
 	ResultTab currentResultTab;
 	UiLargeTextView responseTextView;
