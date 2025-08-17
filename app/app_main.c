@@ -1205,8 +1205,10 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 																	.wrapMode = CLAY_TEXT_WRAP_WORDS,
 																	.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 															}));
+															const char* statusCodeDesc = GetHttpStatusCodeDescription(selectedHistory->responseStatusCode);
+															if (statusCodeDesc == nullptr) { statusCodeDesc = "-"; }
 															CLAY_TEXT(
-																PrintInArenaStr(uiArena, "  Status: %u", selectedHistory->responseStatusCode),
+																PrintInArenaStr(uiArena, "  Status: %u %s", selectedHistory->responseStatusCode, statusCodeDesc),
 																CLAY_TEXT_CONFIG({
 																	.fontId = app->clayUiFontId,
 																	.fontSize = (u16)app->uiFontSize,
