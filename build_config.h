@@ -14,7 +14,7 @@ Description:
 #ifndef _BUILD_CONFIG_H
 #define /* Don't show in CSwitch */ _BUILD_CONFIG_H
 
-#define BUILD_PIG_BUILD 0
+#define BUILD_PIG_BUILD 1
 
 // Controls whether we are making a build that we want to run with a Debugger.
 // This often sacrifices runtime speed or code size for extra debug information.
@@ -81,12 +81,14 @@ Description:
 
 // Rather than compiling the project(s) it will simply output the
 // result of the preprocessor's pass over the code to the build folder
-#define DUMP_PREPROCESSOR 0
+#define DUMP_PREPROCESSOR   0
+// Generates assembly listing files for all compilation units
+#define DUMP_ASSEMBLY       0
 // After .wasm file(s) are generated, we will run wasm2wat on them to make a .wat
 // file (a text format of WebAssembly that is readable, mostly for debugging purposes)
 #define CONVERT_WASM_TO_WAT 0
 // Use emcc when compiling the WEB files
-#define USE_EMSCRIPTEN 0
+#define USE_EMSCRIPTEN      0
 // Tells the sokol_gfx.h include to use OpenGL instead of D3D11 on Windows (NOTE: Smooth resizing only works in OpenGL mode right now!)
 #define PREFER_OPENGL_OVER_D3D11 1
 
