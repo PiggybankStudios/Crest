@@ -9,14 +9,14 @@ Description:
 // +==============================+
 // |  Plat_GetNativeWindowHandle  |
 // +==============================+
-// const void* Plat_GetNativeWindowHandle()
+// OsWindowHandle Plat_GetNativeWindowHandle()
 GET_NATIVE_WINDOW_HANDLE_DEF(Plat_GetNativeWindowHandle)
 {
-	const void* result = nullptr;
+	OsWindowHandle result = nullptr;
 	#if TARGET_IS_WINDOWS
 	{
 		#if BUILD_WITH_SOKOL_APP
-		result = sapp_win32_get_hwnd();
+		result = (OsWindowHandle)sapp_win32_get_hwnd();
 		#else
 		AssertMsg(false, "Plat_GetNativeWindowHandle doesn't have an implementation for the current window library!");
 		#endif

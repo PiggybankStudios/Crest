@@ -523,7 +523,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		NotNull(uiFontAtlas);
 		r32 fontHeight = uiFontAtlas->lineHeight;
 		
-		UiWidgetContext uiContext = NewUiWidgetContext(uiArena, &app->clay, &appIn->keyboard, &appIn->mouse, app->uiScale, &app->focusedTextbox, CursorShape_Default);
+		UiWidgetContext uiContext = NewUiWidgetContext(uiArena, &app->clay, &appIn->keyboard, &appIn->mouse, app->uiScale, &app->focusedTextbox, CursorShape_Default, platform->GetNativeWindowHandle());
 		
 		// +==============================+
 		// |          Render UI           |

@@ -54,7 +54,7 @@ bool AppCreateFonts()
 {
 	FontCharRange fontCharRanges[] = {
 		FontCharRange_ASCII,
-		FontCharRange_LatinExt,
+		FontCharRange_LatinSupplementAccent,
 		NewFontCharRangeSingle(UNICODE_ELLIPSIS_CODEPOINT),
 		NewFontCharRangeSingle(UNICODE_RIGHT_ARROW_CODEPOINT),
 	};
