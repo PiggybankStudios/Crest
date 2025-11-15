@@ -253,6 +253,8 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderContentItem)
 UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHistoryItem)
 {
 	UNUSED(isHovered);
+	UNUSED(item);
+	UNUSED(list);
 	uxx actualIndex = (app->history.length-1 - index);
 	HistoryItem* historyItem = VarArrayGet(HistoryItem, &app->history, actualIndex);
 	
