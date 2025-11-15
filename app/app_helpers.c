@@ -25,7 +25,7 @@ ImageData LoadImageData(Arena* arena, const char* path)
 {
 	ScratchBegin1(scratch, arena);
 	Slice fileContents = Slice_Empty;
-	Result readFileResult = TryReadAppResource(&app->resources, scratch, FilePathLit(path), false, &fileContents);
+	Result readFileResult = TryReadAppResource(&app->resources, scratch, MakeFilePathNt(path), false, &fileContents);
 	Assert(readFileResult == Result_Success);
 	ImageData imageData = ZEROED;
 	Result parseResult = TryParseImageFile(fileContents, arena, &imageData);
@@ -55,47 +55,38 @@ bool AppCreateFonts()
 	FontCharRange fontCharRanges[] = {
 		FontCharRange_ASCII,
 		FontCharRange_LatinSupplementAccent,
-		NewFontCharRangeSingle(UNICODE_ELLIPSIS_CODEPOINT),
-		NewFontCharRangeSingle(UNICODE_RIGHT_ARROW_CODEPOINT),
+		MakeFontCharRangeSingle(UNICODE_ELLIPSIS_CODEPOINT),
+		MakeFontCharRangeSingle(UNICODE_RIGHT_ARROW_CODEPOINT),
 	};
+	
+	Result attachResult = Result_None;
+	Result bakeResult = Result_None;
 	
 	PigFont newUiFont = ZEROED;
 	{
 		newUiFont = InitFont(stdHeap, StrLit("uiFont"));
-		Result attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE);
-		Assert(attachResult == Result_Success);
+		attachResult = TryAttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE); Assert(attachResult == Result_Success);
+		attachResult = TryAttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold); Assert(attachResult == Result_Success);
 		
-		Result bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
-		if (bakeResult != Result_Success)
+		bakeResult = TryBakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, 256, 1024, ArrayCount(fontCharRanges), &fontCharRanges[0]);
+		if (bakeResult != Result_Success && bakeResult != Result_Partial)
 		{
-			bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, NewV2i(512, 512), ArrayCount(fontCharRanges), &fontCharRanges[0]);
-			if (bakeResult != Result_Success)
-			{
-				RemoveAttachedTtfFile(&newUiFont);
-				FreeFont(&newUiFont);
-				return false;
-			}
+			DebugAssert(bakeResult == Result_Success || bakeResult == Result_Partial);
+			FreeFont(&newUiFont);
+			return false;
 		}
-		Assert(bakeResult == Result_Success);
 		FillFontKerningTable(&newUiFont);
-		RemoveAttachedTtfFile(&newUiFont);
+		// RemoveAttachedFontFiles(&newUiFont);
 		
-		attachResult = AttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold);
-		Assert(attachResult == Result_Success);
-		bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, NewV2i(256, 256), ArrayCount(fontCharRanges), &fontCharRanges[0]);
-		if (bakeResult != Result_Success)
+		bakeResult = TryBakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, 256, 1024, ArrayCount(fontCharRanges), &fontCharRanges[0]);
+		if (bakeResult != Result_Success && bakeResult != Result_Partial)
 		{
-			bakeResult = BakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold, NewV2i(512, 512), ArrayCount(fontCharRanges), &fontCharRanges[0]);
-			if (bakeResult != Result_Success)
-			{
-				RemoveAttachedTtfFile(&newUiFont);
-				FreeFont(&newUiFont);
-				return false;
-			}
+			DebugAssert(bakeResult == Result_Success || bakeResult == Result_Partial);
+			FreeFont(&newUiFont);
+			return false;
 		}
-		Assert(bakeResult == Result_Success);
 		
-		RemoveAttachedTtfFile(&newUiFont);
+		MakeFontActive(&newUiFont, 256, 1024, 16, 0, 0);
 	}
 	
 	if (app->uiFont.arena != nullptr) { FreeFont(&app->uiFont); }
@@ -220,7 +211,7 @@ bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Te
 }
 bool ClayBtn(const char* btnText, const char* hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {
-	return ClayBtnStr(StrLit(btnText), StrLit(hotkeyStr), isEnabled, growWidth, icon);
+	return ClayBtnStr(MakeStr8Nt(btnText), MakeStr8Nt(hotkeyStr), isEnabled, growWidth, icon);
 }
 
 uxx FindStr8PairInArray(VarArray* array, Str8 key)
@@ -245,7 +236,7 @@ void DoErrorHoverable(UiWidgetContext* uiContext, Str8 uiElementIdStr, StrErrorL
 				.attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
 				.parentId = uiElementId.id,
 				.attachPoints = { .parent = CLAY_ATTACH_POINT_RIGHT_CENTER, .element = CLAY_ATTACH_POINT_RIGHT_CENTER },
-				.offset = NewV2(UI_R32(-8), 0),
+				.offset = MakeV2(UI_R32(-8), 0),
 			},
 		})
 		{
@@ -325,7 +316,7 @@ void HighlightErrorsInTextbox(UiTextbox* tbox, StrErrorList* errorList)
 		numMergedRanges = CombineOverlappingAndConsecutiveRangesUXX(numMergedRanges, mergedRanges);
 		for (uxx eIndex = 0; eIndex < numMergedRanges; eIndex++)
 		{
-			UiTextboxAddSyntaxRange(tbox, mergedRanges[eIndex], NewRichStrStyleChangeColor(MonokaiMagenta, false));
+			UiTextboxAddSyntaxRange(tbox, mergedRanges[eIndex], MakeRichStrStyleChangeColor(MonokaiMagenta, false));
 		}
 		ScratchEnd(scratch);
 	}

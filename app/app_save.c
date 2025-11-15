@@ -99,7 +99,7 @@ Result TryDeserializeHistoryItem(Arena* arena, Str8 fileContents, HistoryItem* i
 	uxx contentIndex = 0;
 	bool expectingContentKey = false;
 	
-	TextParser parser = NewTextParser(fileContents);
+	TextParser parser = MakeTextParser(fileContents);
 	parser.noComments = true;
 	ParsingToken token = ZEROED;
 	while (TextParserGetToken(&parser, &token))
@@ -144,7 +144,7 @@ Result TryDeserializeHistoryItem(Arena* arena, Str8 fileContents, HistoryItem* i
 				HttpVerb verb = HttpVerb_None;
 				for (uxx vIndex = 0; vIndex < HttpVerb_Count; vIndex++)
 				{
-					Str8 verbStr = StrLit(GetHttpVerbStr((HttpVerb)vIndex));
+					Str8 verbStr = MakeStr8Nt(GetHttpVerbStr((HttpVerb)vIndex));
 					if (StrAnyCaseEquals(verbPart, verbStr)) { verb = (HttpVerb)vIndex; break; }
 				}
 				if (verb == HttpVerb_None) { result = Result_UnknownString; break; }
@@ -199,7 +199,7 @@ Result TryDeserializeHistoryItem(Arena* arena, Str8 fileContents, HistoryItem* i
 					itemOut->failureReason = Result_Count;
 					for (uxx rIndex = 0; rIndex < Result_Count; rIndex++)
 					{
-						Str8 resultStr = StrLit(GetResultStr((Result)rIndex));
+						Str8 resultStr = MakeStr8Nt(GetResultStr((Result)rIndex));
 						if (StrAnyCaseEquals(token.value, resultStr)) { itemOut->failureReason = (Result)rIndex; break; }
 					}
 					if (itemOut->failureReason == Result_Count) { result = Result_UnknownString; break; }
@@ -289,7 +289,7 @@ Result TryDeserializeHistoryList(Arena* arena, Str8 fileContents, VarArray* list
 	uxx itemStartIndex = 0;
 	bool insideItem = false;
 	uxx itemIndex = 0;
-	TextParser parser = NewTextParser(fileContents);
+	TextParser parser = MakeTextParser(fileContents);
 	parser.noComments = true;
 	ParsingToken token = ZEROED;
 	while (TextParserGetToken(&parser, &token))

@@ -1,4 +1,4 @@
-// raddbg 0.9.21 project file
+// raddbg 0.9.24 project file
 
 recent_file: path: "core/gfx/gfx_system.h"
 recent_file: path: "core/third_party/sokol/sokol_gfx.h"
@@ -134,4 +134,19 @@ type_view:
 {
   type: Rectanglef
   expr: "rows($, $.X, $.Y, $.Width, $.Height)"
+}
+debug_info:
+{
+  path: "D:/gamedev/projects/Crest/_build/crest.pdb"
+  timestamp: 66198482193807
+}
+debug_info:
+{
+  path: "D:/gamedev/projects/Crest/_build/pig_core.pdb"
+  timestamp: 66198482192895
+}
+debug_info:
+{
+  path: "D:/gamedev/projects/Crest/_build/crest_app.pdb"
+  timestamp: 66198482655984
 }

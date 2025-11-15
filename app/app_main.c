@@ -333,7 +333,7 @@ HTTP_CALLBACK_DEF(HttpCallback)
 	history->finished = true;
 	history->failed = (request->error != Result_None && request->error != Result_Success);
 	history->failureReason = request->error;
-	Str8 responseStr = NewStr8(request->responseBytes.length, (char*)request->responseBytes.items);
+	Str8 responseStr = MakeStr8(request->responseBytes.length, (char*)request->responseBytes.items);
 	NotNullStr(responseStr);
 	history->responseStatusCode = request->statusCode;
 	history->response = AllocStr8(history->arena, responseStr);
@@ -519,11 +519,19 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		TracyCZoneEnd(Zone_UpdateScrolling);
 		BeginClayUIRender(&app->clay.clay, screenSize, false, mousePos, IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
 		
-		FontAtlas* uiFontAtlas = GetFontAtlas(&app->uiFont, app->uiFontSize, UI_FONT_STYLE);
-		NotNull(uiFontAtlas);
-		r32 fontHeight = uiFontAtlas->lineHeight;
+		r32 fontHeight = GetFontLineHeight(&app->uiFont, app->uiFontSize, UI_FONT_STYLE);
 		
-		UiWidgetContext uiContext = NewUiWidgetContext(uiArena, &app->clay, &appIn->keyboard, &appIn->mouse, app->uiScale, &app->focusedTextbox, CursorShape_Default, platform->GetNativeWindowHandle());
+		UiWidgetContext uiContext = MakeUiWidgetContext(
+			uiArena,
+			&app->clay,
+			&appIn->keyboard,
+			&appIn->mouse,
+			app->uiScale,
+			&app->focusedTextbox,
+			CursorShape_Default,
+			platform->GetNativeWindowHandle(),
+			appIn->programTime
+		);
 		
 		// +==============================+
 		// |          Render UI           |
@@ -567,7 +575,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 							.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 					}));
 					
-					DoUiTextbox(&uiContext, &app->urlTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+					DoUiTextbox(&uiContext, &app->urlTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize);
 					
 					StrErrorList errorList = NewStrErrorList(scratch, 16);
 					GetUriErrors(app->urlTextbox.text, &errorList);
@@ -679,7 +687,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 												}));
 												
-												DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+												DoUiTextbox(&uiContext, &app->headerKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize);
 												
 												StrErrorList errorList = NewStrErrorList(scratch, 16);
 												GetHttpHeaderKeyErrors(app->headerKeyTextbox.text, &errorList);
@@ -706,7 +714,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 												}));
 												
-												DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+												DoUiTextbox(&uiContext, &app->headerValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize);
 												
 												StrErrorList errorList = NewStrErrorList(scratch, 16);
 												GetHttpHeaderValueErrors(app->headerValueTextbox.text, &errorList);
@@ -809,7 +817,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 												}));
 												
-												DoUiTextbox(&uiContext, &app->contentKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+												DoUiTextbox(&uiContext, &app->contentKeyTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize);
 												if (app->contentKeyTextbox.textChanged)
 												{
 													app->contentKeyTextbox.textChanged = false;
@@ -829,7 +837,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 														.textAlignment = CLAY_TEXT_ALIGN_LEFT,
 												}));
 												
-												DoUiTextbox(&uiContext, &app->contentValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize, app->uiScale);
+												DoUiTextbox(&uiContext, &app->contentValueTextbox, &app->uiFont, UI_FONT_STYLE, app->uiFontSize);
 												if (app->contentValueTextbox.textChanged)
 												{
 													app->contentValueTextbox.textChanged = false;
@@ -967,7 +975,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 											})
 											{
 												CLAY_TEXT(
-													StrLit(GetResultTabStr(tab)),
+													MakeStr8Nt(GetResultTabStr(tab)),
 													CLAY_TEXT_CONFIG({
 														.fontId = app->clayUiBoldFontId,
 														.fontSize = (u16)app->uiFontSize,

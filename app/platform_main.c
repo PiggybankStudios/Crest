@@ -34,19 +34,7 @@ Description:
 #endif
 
 #if BUILD_WITH_SOKOL_APP
-#define SOKOL_APP_IMPL
-#if TARGET_IS_LINUX
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-field-initializers" //warning: missing field 'revents' initializer [-Wmissing-field-initializers]
-#endif
-#include "third_party/sokol/sokol_app.h"
-#if TARGET_IS_LINUX
-#pragma clang diagnostic pop
-#endif
-#endif //BUILD_WITH_SOKOL_APP
-
-#if BUILD_WITH_SOKOL_APP
-#include "misc/misc_sokol_app_helpers.c"
+#include "lib/lib_sokol_app_impl.c"
 #endif
 
 #define ENABLE_RAYLIB_LOGS_DEBUG   0
@@ -147,11 +135,11 @@ bool PlatDoUpdate(void)
 	bool newIsFullScreen = IsWindowFullscreen();
 	bool isMouseLocked = IsCursorHidden();
 	#elif BUILD_WITH_SOKOL_APP
-	v2i newScreenSize = NewV2i(sapp_width(), sapp_height());
+	v2i newScreenSize = MakeV2i(sapp_width(), sapp_height());
 	bool newIsFullScreen = sapp_is_fullscreen();
 	bool isMouseLocked = sapp_mouse_locked();
 	#else
-	v2i newScreenSize = NewV2i(800, 600);
+	v2i newScreenSize = MakeV2i(800, 600);
 	bool newIsFullScreen = false;
 	bool isMouseLocked = false;
 	#endif
@@ -167,7 +155,7 @@ bool PlatDoUpdate(void)
 	newAppInput->isMinimizedChanged = false;
 	newAppInput->isFocusedChanged = false;
 	RefreshKeyboardState(&newAppInput->keyboard);
-	RefreshMouseState(&newAppInput->mouse, isMouseLocked, NewV2((r32)newScreenSize.Width/2.0f, (r32)newScreenSize.Height/2.0f));
+	RefreshMouseState(&newAppInput->mouse, isMouseLocked, MakeV2((r32)newScreenSize.Width/2.0f, (r32)newScreenSize.Height/2.0f));
 	IncrementU64(newAppInput->frameIndex);
 	IncrementU64By(newAppInput->programTime, 16); //TODO: Replace this hardcoded increment!
 	platformData->oldAppInput = oldAppInput;
@@ -356,12 +344,13 @@ void PlatSappEvent(const sapp_event* event)
 	
 	if (platformData->currentAppInput != nullptr)
 	{
-		handledEvent = HandleSokolKeyboardAndMouseEvents(
+		handledEvent = HandleSokolKeyboardMouseAndTouchEvents(
 			event,
 			platformData->currentAppInput->programTime, //TODO: Calculate a more accurate programTime to pass here!
 			platformData->currentAppInput->screenSize,
 			&platformData->currentAppInput->keyboard,
 			&platformData->currentAppInput->mouse,
+			nullptr, //TODO: Add TouchscreenState*
 			sapp_mouse_locked()
 		);
 	}
