@@ -61,6 +61,7 @@ PlatformData* platformData = nullptr;
 Arena* stdHeap = nullptr;
 PlatformInfo* platformInfo = nullptr;
 PlatformApi* platform = nullptr;
+ProgramArgs programArgs = ZEROED;
 
 // +--------------------------------------------------------------+
 // |                    Platform Source Files                     |
@@ -117,7 +118,7 @@ void RaylibLogCallback(int logLevel, const char* text, va_list args)
 
 bool PlatDoUpdate(void)
 {
-	TracyCFrameMark;
+	TracyCFrameMarkNamed("Game Loop");
 	TracyCZoneN(Zone_Func, "PlatDoUpdate", true);
 	bool renderedFrame = true;
 	//TODO: Check for dll changes, reload it!
@@ -180,16 +181,8 @@ void PlatSappInit(void)
 int main()
 #endif
 {
-	TracyCZoneN(Zone_Func, "main", true);
-	Arena stdHeapLocal = ZEROED;
-	InitArenaStdHeap(&stdHeapLocal);
-	platformData = AllocType(PlatformData, &stdHeapLocal);
-	NotNull(platformData);
-	ClearPointer(platformData);
-	MyMemCopy(&platformData->stdHeap, &stdHeapLocal, sizeof(Arena));
-	stdHeap = &platformData->stdHeap;
-	InitArenaStdHeap(&platformData->stdHeapAllowFreeWithoutSize);
-	FlagSet(platformData->stdHeapAllowFreeWithoutSize.flags, ArenaFlag_AllowFreeWithoutSize);
+	TracyCZoneN(Zone_Func, "PlatSappInit", true);
+	
 	InitScratchArenasVirtual(Gigabytes(4));
 	
 	ScratchBegin(loadScratch);
@@ -296,34 +289,36 @@ int main()
 	NotNull(platformData->appMemoryPntr);
 	
 	ScratchEnd(loadScratch);
+	OsMarkStartTime();
+	TracyCZoneEnd(Zone_Func);
 	
-	// +--------------------------------------------------------------+
-	// |                        Main Game Loop                        |
-	// +--------------------------------------------------------------+
+	// +==============================+
+	// |       Raylib Game Loop       |
+	// +==============================+
 	#if BUILD_WITH_RAYLIB
-	while (!WindowShouldClose())
 	{
-		//Grab all scratch arenas so we can ensure they get reset at the end of each frame
-		ScratchBegin(scratch1);
-		ScratchBegin1(scratch2, scratch1);
-		ScratchBegin2(scratch3, scratch1, scratch2);
-		
-		PlatDoUpdate();
-		
-		ScratchEnd(scratch1);
-		ScratchEnd(scratch2);
-		ScratchEnd(scratch3);
+		while (!WindowShouldClose())
+		{
+			//Grab all scratch arenas so we can ensure they get reset at the end of each frame
+			ScratchBegin(scratch1);
+			ScratchBegin1(scratch2, scratch1);
+			ScratchBegin2(scratch3, scratch1, scratch2);
+			
+			PlatDoUpdate();
+			
+			ScratchEnd(scratch1);
+			ScratchEnd(scratch2);
+			ScratchEnd(scratch3);
+		}
+		#if !BUILD_INTO_SINGLE_UNIT
+		CloseWindow();
+		#endif
 	}
-	#if !BUILD_INTO_SINGLE_UNIT
-	CloseWindow();
-	#endif
 	#endif //BUILD_WITH_RAYLIB
 	
 	#if !BUILD_WITH_SOKOL_APP
 	return 0;
 	#endif
-	
-	TracyCZoneEnd(Zone_Func);
 }
 
 #if BUILD_WITH_SOKOL_APP
@@ -418,16 +413,60 @@ sapp_desc sokol_main(int argc, char* argv[])
 {
 	UNUSED(argc);
 	UNUSED(argv);
+	
+	#if PROFILING_ENABLED
+	TracyCSetThreadName("main");
+	Str8 projectName = StrLit(PROJECT_READABLE_NAME_STR);
+	TracyCAppInfo(projectName.chars, projectName.length);
+	#endif
+	
 	#if TARGET_HAS_THREADING
 	MainThreadId = OsGetCurrentThreadId();
 	#endif
-	return (sapp_desc){
+	
+	OsMarkStartTime(); //NOTE: This is also reset at the end of PlatSappInit
+	
+	Arena stdHeapLocal = ZEROED;
+	InitArenaStdHeap(&stdHeapLocal);
+	// FlagSet(stdHeapLocal.flags, ArenaFlag_AddPaddingForDebug);
+	platformData = AllocType(PlatformData, &stdHeapLocal);
+	NotNull(platformData);
+	ClearPointer(platformData);
+	MyMemCopy(&platformData->stdHeap, &stdHeapLocal, sizeof(Arena));
+	stdHeap = &platformData->stdHeap;
+	InitArenaStdHeap(&platformData->stdHeapAllowFreeWithoutSize);
+	FlagSet(platformData->stdHeapAllowFreeWithoutSize.flags, ArenaFlag_AllowFreeWithoutSize);
+	// FlagSet(platformData->stdHeapAllowFreeWithoutSize.flags, ArenaFlag_AddPaddingForDebug);
+	
+	#if TARGET_IS_WINDOWS
+	Assert(argc >= 1); //First argument on windows is always the path to our .exe
+	ParseProgramArgs(stdHeap, (uxx)argc-1, &argv[1], &programArgs);
+	#else
+	//TODO: Is the above true for other platforms??
+	//TODO: We are getting a warning in clang unless we make an explicit cast: warning: passing 'char **' to parameter of type 'const char **' discards qualifiers in nested pointer types
+	ParseProgramArgs(stdHeap, (uxx)argc, (const char**)&argv[0], &programArgs);
+	#endif
+	
+	v2 windowSize = DEFAULT_WINDOW_SIZE;
+	Str8 sizeStr = FindNamedProgramArgStr(&programArgs, StrLit("size"), StrLit("s"), Str8_Empty);
+	if (!IsEmptyStr(sizeStr))
+	{
+		v2 newSize = V2_Zero;
+		if (TryParseV2(sizeStr, &newSize, nullptr))
+		{
+			windowSize = newSize;
+		}
+	}
+	if (windowSize.Width < MIN_WINDOW_SIZE.Width) { windowSize.Width = MIN_WINDOW_SIZE.Width; }
+	if (windowSize.Height < MIN_WINDOW_SIZE.Height) { windowSize.Height = MIN_WINDOW_SIZE.Height; }
+	
+	return NEW_STRUCT(sapp_desc){
 		.init_cb = PlatSappInit,
 		.frame_cb = PlatDoUpdate,
 		.cleanup_cb = PlatSappCleanup,
 		.event_cb = PlatSappEvent,
-		.width = 800,
-		.height = 600,
+		.width = RoundR32i(windowSize.Width),
+		.height = RoundR32i(windowSize.Height),
 		.window_title = "Loading...",
 		.icon.sokol_default = false,
 		.logger.func = SokolLogCallback,

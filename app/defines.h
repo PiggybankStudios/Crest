@@ -16,4 +16,7 @@ Date:   02\25\2025
 
 #define SAVE_HISTORY_DELAY 1000 //ms
 
+#define DEFAULT_WINDOW_SIZE   MakeV2(800, 600)
+#define MIN_WINDOW_SIZE       MakeV2(150, 100)
+
 #endif //  _DEFINES_H
