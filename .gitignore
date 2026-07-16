@@ -1,8 +1,9 @@
 *.sublime-workspace
 core/
+pig_build/
 # _data/resources/
-_build/
-_data/*.exe
-_data/*.dll
-_data/*.ini
+build/
+data/*.exe
+data/*.dll
+data/*.ini
 .vs/

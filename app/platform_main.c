@@ -156,7 +156,7 @@ bool PlatDoUpdate(void)
 	newAppInput->isMinimizedChanged = false;
 	newAppInput->isFocusedChanged = false;
 	RefreshKeyboardState(&newAppInput->keyboard);
-	RefreshMouseState(&newAppInput->mouse, isMouseLocked, MakeV2((r32)newScreenSize.Width/2.0f, (r32)newScreenSize.Height/2.0f));
+	RefreshMouseState(&newAppInput->mouse, isMouseLocked, MakeV2((r32)newScreenSize.width/2.0f, (r32)newScreenSize.height/2.0f));
 	IncrementU64(newAppInput->frameIndex);
 	IncrementU64By(newAppInput->programTime, 16); //TODO: Replace this hardcoded increment!
 	platformData->oldAppInput = oldAppInput;
@@ -256,7 +256,7 @@ int main()
 	
 	#if BUILD_WITH_SOKOL_GFX
 	TracyCZoneN(Zone_InitSokolGfx, "InitSokolGfx", true);
-	InitSokolGraphics((sg_desc){
+	InitSokolGraphics(NEW_STRUCT(sg_desc){
 		// .buffer_pool_size = ?; //int
 		// .image_pool_size = ?; //int
 		// .sampler_pool_size = ?; //int
@@ -272,9 +272,8 @@ int main()
 		// .wgpu_disable_bindgroups_cache = ?; //bool  // set to true to disable the WebGPU backend BindGroup cache
 		// .wgpu_bindgroups_cache_size = ?; //int      // number of slots in the WebGPU bindgroup cache (must be 2^N)
 		// .allocator = ?; //sg_allocator TODO: Fill this out!
-		.environment = CreateSokolAppEnvironment(),
+		.environment = GetSokolGfxEnvironment(),
 		.logger.func = SokolLogCallback,
-		
 	});
 	InitGfxSystem(stdHeap, &gfx);
 	TracyCZoneEnd(Zone_InitSokolGfx);
@@ -411,20 +410,20 @@ void PlatSappEvent(const sapp_event* event)
 
 sapp_desc sokol_main(int argc, char* argv[])
 {
-	UNUSED(argc);
-	UNUSED(argv);
-	
 	#if PROFILING_ENABLED
-	TracyCSetThreadName("main");
 	Str8 projectName = StrLit(PROJECT_READABLE_NAME_STR);
 	TracyCAppInfo(projectName.chars, projectName.length);
 	#endif
 	
 	#if TARGET_HAS_THREADING
+	//TODO: On Android this is actually a different thread than the one we will normally be updating/rendering in. We should probably track the other thread ID as the "main thread"
 	MainThreadId = OsGetCurrentThreadId();
+	OsSetThreadName(nullptr, StrLit("Main"));
 	#endif
 	
 	OsMarkStartTime(); //NOTE: This is also reset at the end of PlatSappInit
+	
+	InitDebugOutputRouter(nullptr);
 	
 	Arena stdHeapLocal = ZEROED;
 	InitArenaStdHeap(&stdHeapLocal);
@@ -438,14 +437,10 @@ sapp_desc sokol_main(int argc, char* argv[])
 	FlagSet(platformData->stdHeapAllowFreeWithoutSize.flags, ArenaFlag_AllowFreeWithoutSize);
 	// FlagSet(platformData->stdHeapAllowFreeWithoutSize.flags, ArenaFlag_AddPaddingForDebug);
 	
-	#if TARGET_IS_WINDOWS
-	Assert(argc >= 1); //First argument on windows is always the path to our .exe
-	ParseProgramArgs(stdHeap, (uxx)argc-1, &argv[1], &programArgs);
-	#else
-	//TODO: Is the above true for other platforms??
-	//TODO: We are getting a warning in clang unless we make an explicit cast: warning: passing 'char **' to parameter of type 'const char **' discards qualifiers in nested pointer types
-	ParseProgramArgs(stdHeap, (uxx)argc, (const char**)&argv[0], &programArgs);
-	#endif
+	//TODO: Is the below true for other platforms??
+	Assert(argc >= 1); //First argument on Windows and Linux (Ubuntu tested) is always the path to our executable
+	//NOTE: We are getting a warning in clang unless we make an explicit cast: warning: passing 'char **' to parameter of type 'const char **' discards qualifiers in nested pointer types
+	ParseProgramArgs(stdHeap, (uxx)argc-1, (const char**)&argv[1], &programArgs);
 	
 	v2 windowSize = DEFAULT_WINDOW_SIZE;
 	Str8 sizeStr = FindNamedProgramArgStr(&programArgs, StrLit("size"), StrLit("s"), Str8_Empty);
@@ -457,16 +452,16 @@ sapp_desc sokol_main(int argc, char* argv[])
 			windowSize = newSize;
 		}
 	}
-	if (windowSize.Width < MIN_WINDOW_SIZE.Width) { windowSize.Width = MIN_WINDOW_SIZE.Width; }
-	if (windowSize.Height < MIN_WINDOW_SIZE.Height) { windowSize.Height = MIN_WINDOW_SIZE.Height; }
+	if (windowSize.width < MIN_WINDOW_SIZE.width) { windowSize.width = MIN_WINDOW_SIZE.width; }
+	if (windowSize.height < MIN_WINDOW_SIZE.height) { windowSize.height = MIN_WINDOW_SIZE.height; }
 	
 	return NEW_STRUCT(sapp_desc){
 		.init_cb = PlatSappInit,
 		.frame_cb = PlatDoUpdate,
 		.cleanup_cb = PlatSappCleanup,
 		.event_cb = PlatSappEvent,
-		.width = RoundR32i(windowSize.Width),
-		.height = RoundR32i(windowSize.Height),
+		.width = RoundR32i(windowSize.width),
+		.height = RoundR32i(windowSize.height),
 		.window_title = "Loading...",
 		.icon.sokol_default = false,
 		.logger.func = SokolLogCallback,

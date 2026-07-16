@@ -396,31 +396,31 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==================================+
 		// | Handle Ctrl+Plus/Minus/0/Scroll  |
 		// +==================================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Plus, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_Plus, true) && IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control))
 		{
 			AppChangeFontSize(true);
 		}
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Minus, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_Minus, true) && IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control))
 		{
 			AppChangeFontSize(false);
 		}
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_0, true) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_0, true) && IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control))
 		{
 			app->uiFontSize = DEFAULT_UI_FONT_SIZE;
 			app->uiScale = 1.0f;
 			bool fontBakeSuccess = AppCreateFonts();
 			Assert(fontBakeSuccess);
 		}
-		if (IsKeyboardKeyDown(&appIn->keyboard, Key_Control) && appIn->mouse.scrollDelta.Y != 0)
+		if (IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control) && appIn->mouse.scrollDelta.y != 0)
 		{
-			AppChangeFontSize(appIn->mouse.scrollDelta.Y > 0);
+			AppChangeFontSize(appIn->mouse.scrollDelta.y > 0);
 		}
 		
 		// +===============================+
 		// | Ctrl+Tilde Toggles Clay Debug |
 		// +===============================+
 		#if DEBUG_BUILD
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tilde, false) && IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_Tilde, false) && IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control))
 		{
 			Clay_SetDebugModeEnabled(!Clay_IsDebugModeEnabled());
 		}
@@ -429,7 +429,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		// | Tab Cycles Through Textboxes |
 		// +==============================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Tab, true))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_Tab, true))
 		{
 			uxx currentFocusIndex = ArrayCount(focusableTextboxes);
 			for (uxx fIndex = 0; fIndex < ArrayCount(focusableTextboxes); fIndex++)
@@ -443,7 +443,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			
 			if (currentFocusIndex < ArrayCount(focusableTextboxes))
 			{
-				if (IsKeyboardKeyDown(&appIn->keyboard, Key_Shift))
+				if (IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Shift))
 				{
 					app->focusedTextbox = currentFocusIndex > 0
 						? focusableTextboxes[currentFocusIndex-1]
@@ -463,9 +463,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		// +==============================+
 		// |    Handle Enter to Commit    |
 		// +==============================+
-		if (IsKeyboardKeyPressed(&appIn->keyboard, Key_Enter, false))
+		if (IsKeyboardKeyPressed(&appIn->keyboard, nullptr, Key_Enter, false))
 		{
-			if (IsKeyboardKeyDown(&appIn->keyboard, Key_Control))
+			if (IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control))
 			{
 				makeRequest = true;
 			}
@@ -505,7 +505,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		ClearDepthBuffer(1.0f);
 		SetDepth(1.0f);
 		mat4 projMat = Mat4_Identity;
-		TransformMat4(&projMat, MakeScaleXYZMat4(1.0f/(screenSize.Width/2.0f), 1.0f/(screenSize.Height/2.0f), 1.0f));
+		TransformMat4(&projMat, MakeScaleXYZMat4(1.0f/(screenSize.width/2.0f), 1.0f/(screenSize.height/2.0f), 1.0f));
 		TransformMat4(&projMat, MakeTranslateXYZMat4(-1.0f, -1.0f, 0.0f));
 		TransformMat4(&projMat, MakeScaleYMat4(-1.0f));
 		SetProjectionMat(projMat);
@@ -515,24 +515,28 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		FlagSet(uiArena->flags, ArenaFlag_DontPop);
 		uxx uiArenaMark = ArenaGetMark(uiArena);
 		
-		v2 scrollContainerInput = IsKeyboardKeyDown(&appIn->keyboard, Key_Control) ? V2_Zero : appIn->mouse.scrollDelta;
+		v2 scrollContainerInput = IsKeyboardKeyDown(&appIn->keyboard, nullptr, Key_Control) ? V2_Zero : appIn->mouse.scrollDelta;
 		TracyCZoneN(Zone_UpdateScrolling, "UpdateScrolling", true);
 		UpdateClayScrolling(&app->clay.clay, 16.6f, false, scrollContainerInput, false);
 		TracyCZoneEnd(Zone_UpdateScrolling);
-		BeginClayUIRender(&app->clay.clay, screenSize, false, mousePos, IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
+		BeginClayUIRender(&app->clay.clay, screenSize, false, mousePos, IsMouseBtnDown(&appIn->mouse, nullptr, MouseBtn_Left));
 		
 		r32 fontHeight = GetFontLineHeight(&app->uiFont, app->uiFontSize, UI_FONT_STYLE);
 		
+		// #define MakeUiWidgetContext(keyboardPntr, keyboardHandlingPntr, mousePntr, mouseHandlingPntr, uiScaleValue, focusedUiElementPntrPntr, cursorShapeValue, windowHandleValue, programTimeValue, tooltipsPntr)
 		UiWidgetContext uiContext = MakeUiWidgetContext(
 			uiArena,
 			&app->clay,
 			&appIn->keyboard,
+			nullptr, //keyboardHandlingPntr
 			&appIn->mouse,
+			nullptr, //mouseHandlingPntr
 			app->uiScale,
 			&app->focusedTextbox,
-			CursorShape_Default,
+			MouseCursorShape_Default,
 			platform->GetNativeWindowHandle(),
-			appIn->programTime
+			appIn->programTime,
+			nullptr //tooltipsPntr
 		);
 		
 		// +==============================+
@@ -960,7 +964,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 											ClayId tabId = ToClayIdPrint(uiArena, "%sTab", GetResultTabStr(tab));
 											bool isHovered = IsMouseOverClay(tabId);
 											
-											if (isHovered && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left))
+											if (isHovered && IsMouseBtnPressed(&appIn->mouse, nullptr, MouseBtn_Left))
 											{
 												app->currentResultTab = tab;
 											}

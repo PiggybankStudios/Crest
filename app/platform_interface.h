@@ -63,7 +63,7 @@ typedef SET_WINDOW_TITLE_DEF(SetWindowTitle_f);
 #define SET_WINDOW_ICON_DEF(functionName) void functionName(uxx numIconSizes, const ImageData* iconSizes)
 typedef SET_WINDOW_ICON_DEF(SetWindowIcon_f);
 
-#define SET_CURSOR_SHAPE_DEF(functionName) void functionName(CursorShape shape)
+#define SET_CURSOR_SHAPE_DEF(functionName) void functionName(MouseCursorShape shape)
 typedef SET_CURSOR_SHAPE_DEF(SetCursorShape_f);
 #endif //BUILD_WITH_SOKOL_APP
 

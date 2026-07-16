@@ -121,15 +121,15 @@ bool AppChangeFontSize(bool increase)
 #define CLAY_ICON(texturePntr, size, color) CLAY({      \
 	.layout = {                                         \
 		.sizing = {                                     \
-			.width = CLAY_SIZING_FIXED((size).Width),   \
-			.height = CLAY_SIZING_FIXED((size).Height), \
+			.width = CLAY_SIZING_FIXED((size).width),   \
+			.height = CLAY_SIZING_FIXED((size).height), \
 		},                                              \
 	},                                                  \
 	.image = {                                          \
 		.imageData = (texturePntr),                     \
 		.sourceDimensions = {                           \
-			.Width = (r32)((texturePntr)->Width),       \
-			.Height = (r32)((texturePntr)->Height),     \
+			.width = (r32)((texturePntr)->width),       \
+			.height = (r32)((texturePntr)->height),     \
 		},                                              \
 	},                                                  \
 	.backgroundColor = color,                           \
@@ -143,7 +143,7 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 	ClayId btnId = ToClayId(fullIdStr);
 	ClayId hotkeyId = ToClayId(hotkeyIdStr);
 	bool isHovered = IsMouseOverClay(btnId);
-	bool isPressed = (isHovered && !hasError && IsMouseBtnDown(&appIn->mouse, MouseBtn_Left));
+	bool isPressed = (isHovered && !hasError && IsMouseBtnDown(&appIn->mouse, nullptr, MouseBtn_Left));
 	Color32 backgroundColor = !isEnabled ? MonokaiBack : (isPressed ? MonokaiGray2 : ((isHovered && !hasError) ? MonokaiGray1 : MonokaiDarkGray));
 	Color32 borderColor = hasError ? MonokaiMagenta : (isEnabled ? MonokaiWhite : MonokaiGray1);
 	Color32 textColor = hasError ? MonokaiMagenta : ((isEnabled && isHovered) ? MonokaiDarkGray : MonokaiWhite);
@@ -203,7 +203,7 @@ bool ClayBtnStrEx(Str8 idStr, Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool
 			}
 		}
 	}
-	return (isHovered && isEnabled && !hasError && IsMouseBtnPressed(&appIn->mouse, MouseBtn_Left));
+	return (isHovered && isEnabled && !hasError && IsMouseBtnPressed(&appIn->mouse, nullptr, MouseBtn_Left));
 }
 bool ClayBtnStr(Str8 btnText, Str8 hotkeyStr, bool isEnabled, bool growWidth, Texture* icon)
 {

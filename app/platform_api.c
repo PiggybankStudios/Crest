@@ -34,7 +34,7 @@ GET_NATIVE_WINDOW_HANDLE_DEF(Plat_GetNativeWindowHandle)
 // +==============================+
 GET_SOKOL_SWAPCHAIN_DEF(Plat_GetSokolSwapchain)
 {
-	return GetSokolAppSwapchain();
+	return GetSokolGfxSwapchain();
 }
 
 // +==============================+
@@ -98,8 +98,8 @@ SET_WINDOW_ICON_DEF(Plat_SetWindowIcon)
 	for (uxx iIndex = 0; iIndex < numIconSizes; iIndex++)
 	{
 		const ImageData* imageData = &iconSizes[iIndex];
-		iconDesc.images[iIndex].width = (int)imageData->size.Width;
-		iconDesc.images[iIndex].height = (int)imageData->size.Height;
+		iconDesc.images[iIndex].width = (int)imageData->size.width;
+		iconDesc.images[iIndex].height = (int)imageData->size.height;
 		iconDesc.images[iIndex].pixels = (sapp_range){ imageData->pixels, sizeof(u32) * imageData->numPixels };
 	}
 	sapp_set_icon(&iconDesc);
@@ -108,7 +108,7 @@ SET_WINDOW_ICON_DEF(Plat_SetWindowIcon)
 // +==============================+
 // |     Plat_SetCursorShape      |
 // +==============================+
-// void Plat_SetCursorShape(CursorShape shape)
+// void Plat_SetCursorShape(MouseCursorShape shape)
 SET_CURSOR_SHAPE_DEF(Plat_SetCursorShape)
 {
 	// TODO: What is SAPP_MOUSECURSOR_ARROW?
@@ -117,13 +117,13 @@ SET_CURSOR_SHAPE_DEF(Plat_SetCursorShape)
 	sapp_mouse_cursor sokolCursor = SAPP_MOUSECURSOR_DEFAULT;
 	switch (shape)
 	{
-		case CursorShape_Default: sokolCursor = SAPP_MOUSECURSOR_DEFAULT; break;
-		case CursorShape_Point: sokolCursor = SAPP_MOUSECURSOR_POINTING_HAND; break;
-		case CursorShape_IBeam: sokolCursor = SAPP_MOUSECURSOR_IBEAM; break;
-		case CursorShape_ResizeHori: sokolCursor = SAPP_MOUSECURSOR_RESIZE_EW; break;
-		case CursorShape_ResizeVert: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NS; break;
-		case CursorShape_ResizeDiagNwSe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NWSE; break;
-		case CursorShape_ResizeDiagSwNe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NESW; break;
+		case MouseCursorShape_Default: sokolCursor = SAPP_MOUSECURSOR_DEFAULT; break;
+		case MouseCursorShape_Point: sokolCursor = SAPP_MOUSECURSOR_POINTING_HAND; break;
+		case MouseCursorShape_IBeam: sokolCursor = SAPP_MOUSECURSOR_IBEAM; break;
+		case MouseCursorShape_ResizeHori: sokolCursor = SAPP_MOUSECURSOR_RESIZE_EW; break;
+		case MouseCursorShape_ResizeVert: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NS; break;
+		case MouseCursorShape_ResizeDiagNwSe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NWSE; break;
+		case MouseCursorShape_ResizeDiagSwNe: sokolCursor = SAPP_MOUSECURSOR_RESIZE_NESW; break;
 	}
 	sapp_set_mouse_cursor(sokolCursor);
 }
