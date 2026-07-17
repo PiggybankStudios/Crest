@@ -7,3 +7,4 @@ data/*.exe
 data/*.dll
 data/*.ini
 .vs/
+.DS_Store
