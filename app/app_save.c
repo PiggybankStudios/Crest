@@ -110,7 +110,7 @@ Result TryDeserializeHistoryItem(Arena* arena, Str8 fileContents, HistoryItem* i
 			{
 				if (foundItemStart) { result = Result_Duplicate; break; } //TODO: Better result code?
 				
-				bool spaceCount = 0;
+				uxx spaceCount = 0;
 				uxx prevSpaceIndex = 0;
 				
 				Str8 successPart = Str8_Empty;

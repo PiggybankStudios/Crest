@@ -250,7 +250,7 @@ void DoErrorHoverable(UiWidgetContext* uiContext, Str8 uiElementIdStr, StrErrorL
 							.sizing = { .width = CLAY_SIZING_FIT(UI_R32(18)), .height = CLAY_SIZING_FIXED(UI_R32(18)) },
 							.childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
 						},
-						.border = { .width = UI_BORDER(1), .color = MonokaiMagenta },
+						.border = { .width = CLAY_BORDER_OUTSIDE(UI_BORDER(1)), .color = MonokaiMagenta },
 						.cornerRadius = CLAY_CORNER_RADIUS(UI_R32(18/2)),
 					})
 					{

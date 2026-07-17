@@ -308,6 +308,7 @@ UI_LIST_VIEW_ITEM_RENDER_DEF(RenderHistoryItem)
 	// } Clay__CloseElement();
 }
 
+#if BUILD_WITH_HTTP
 // +==============================+
 // |         HttpCallback         |
 // +==============================+
@@ -351,6 +352,7 @@ HTTP_CALLBACK_DEF(HttpCallback)
 	}
 	app->historyChanged = true;
 }
+#endif
 
 // +==============================+
 // |          AppUpdate           |
@@ -379,7 +381,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	bool addContent = false;
 	bool canAddContent = (app->contentKeyTextbox.text.length > 0 && app->contentValueTextbox.text.length > 0);
 	bool makeRequest = false;
-	bool canMakeRequest = true;
+	bool canMakeRequest = true; UNUSED(canMakeRequest);
 	
 	// +==============================+
 	// |            Update            |
@@ -523,16 +525,12 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 		
 		r32 fontHeight = GetFontLineHeight(&app->uiFont, app->uiFontSize, UI_FONT_STYLE);
 		
-		// #define MakeUiWidgetContext(keyboardPntr, keyboardHandlingPntr, mousePntr, mouseHandlingPntr, uiScaleValue, focusedUiElementPntrPntr, cursorShapeValue, windowHandleValue, programTimeValue, tooltipsPntr)
-		UiWidgetContext uiContext = MakeUiWidgetContext(
-			uiArena,
+		UiWidgetContext uiContext = MakeUiWidgetContext(uiArena,
 			&app->clay,
-			&appIn->keyboard,
-			nullptr, //keyboardHandlingPntr
-			&appIn->mouse,
-			nullptr, //mouseHandlingPntr
+			&appIn->keyboard, nullptr,
+			&appIn->mouse, nullptr,
 			app->uiScale,
-			&app->focusedTextbox,
+			(void**)&app->focusedTextbox,
 			MouseCursorShape_Default,
 			platform->GetNativeWindowHandle(),
 			appIn->programTime,
@@ -1089,10 +1087,10 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 																if (ClayBtnStr(StrLit("Save to File"), Str8_Empty, true, false, nullptr))
 																{
 																	Str8Pair extensions[] = {
-																		{ StrLit("All Files"), StrLit("*.*") },
-																		{ StrLit("Text Files"), StrLit("*.txt") },
-																		{ StrLit("HTML"), StrLit("*.html") },
-																		{ StrLit("JSON"), StrLit("*.json") },
+																		{ .key=StrLit("All Files"),  .value=StrLit("*.*")    },
+																		{ .key=StrLit("Text Files"), .value=StrLit("*.txt")  },
+																		{ .key=StrLit("HTML"),       .value=StrLit("*.html") },
+																		{ .key=StrLit("JSON"),       .value=StrLit("*.json") },
 																	};
 																	FilePath saveFilePath = FilePath_Empty;
 																	Result saveResult = OsDoSaveFileDialog(ArrayCount(extensions), &extensions[0], 1, scratch, &saveFilePath);
@@ -1430,6 +1428,7 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 	// +==============================+
 	if (makeRequest)
 	{
+		#if BUILD_WITH_HTTP
 		if (!canMakeRequest) { app->makeRequestAttemptTime = appIn->programTime; }
 		else
 		{
@@ -1489,6 +1488,9 @@ EXPORT_FUNC APP_UPDATE_DEF(AppUpdate)
 			
 			app->historyChanged = true;
 		}
+		#else //!BUILD_WITH_HTTP
+		Notify_W("HTTP layer of PigCore is disabled");
+		#endif //BUILD_WITH_HTTP
 	}
 	
 	ScratchEnd(scratch);

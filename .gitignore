@@ -6,5 +6,7 @@ build/
 data/*.exe
 data/*.dll
 data/*.ini
+data/*.app/
+data/crest
 .vs/
 .DS_Store
