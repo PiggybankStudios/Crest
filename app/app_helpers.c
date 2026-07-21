@@ -65,8 +65,13 @@ bool AppCreateFonts()
 	PigFont newUiFont = ZEROED;
 	{
 		newUiFont = InitFont(stdHeap, StrLit("uiFont"));
+		#if 1
+		attachResult = TryAttachFontFileFromResources(&newUiFont, StrLit(UI_FONT_PATH), UI_FONT_STYLE); Assert(attachResult == Result_Success);
+		attachResult = TryAttachFontFileFromResources(&newUiFont, StrLit(UI_FONT_PATH), UI_FONT_STYLE|FontStyleFlag_Bold); Assert(attachResult == Result_Success);
+		#else
 		attachResult = TryAttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE); Assert(attachResult == Result_Success);
 		attachResult = TryAttachOsTtfFileToFont(&newUiFont, StrLit(UI_FONT_NAME), app->uiFontSize, UI_FONT_STYLE|FontStyleFlag_Bold); Assert(attachResult == Result_Success);
+		#endif
 		
 		bakeResult = TryBakeFontAtlas(&newUiFont, app->uiFontSize, UI_FONT_STYLE, 256, 1024, ArrayCount(fontCharRanges), &fontCharRanges[0]);
 		if (bakeResult != Result_Success && bakeResult != Result_Partial)

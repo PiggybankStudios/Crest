@@ -77,3 +77,20 @@ Slice ReadAppResource(AppResources* resources, Arena* arena, FilePath path, bool
 	Assert(openResult == Result_Success);
 	return result;
 }
+
+Slice TryLoadFontFileFromResources(Arena* arena, Str8 filePath)
+{
+	Slice fileContents = Slice_Empty;
+	Result result = TryReadAppResource(&app->resources, arena, filePath, false, &fileContents);
+	Assert(result == Result_Success);
+	return fileContents;
+}
+Result TryAttachFontFileFromResources(PigFont* font, Str8 filePath, u8 fontStyle)
+{
+	ScratchBegin1(scratch, font->arena);
+	Slice fontFileContents = TryLoadFontFileFromResources(scratch, filePath);
+	Assert(fontFileContents.length > 0);
+	Result attachResult = TryAttachFontFile(font, filePath, fontFileContents, fontStyle, true);
+	ScratchEnd(scratch);
+	return attachResult;
+}

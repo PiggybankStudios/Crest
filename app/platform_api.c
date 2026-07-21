@@ -21,6 +21,14 @@ GET_NATIVE_WINDOW_HANDLE_DEF(Plat_GetNativeWindowHandle)
 		AssertMsg(false, "Plat_GetNativeWindowHandle doesn't have an implementation for the current window library!");
 		#endif
 	}
+	#elif TARGET_IS_OSX
+	{
+		#if BUILD_WITH_SOKOL_APP
+		result = (__bridge OsWindowHandle)sapp_macos_get_window();
+		#else
+		AssertMsg(false, "Plat_GetNativeWindowHandle doesn't have an implementation for the current window library!");
+		#endif
+	}
 	#else
 	AssertMsg(false, "Plat_GetNativeWindowHandle doesn't have an implementation for the current TARGET!");
 	#endif
