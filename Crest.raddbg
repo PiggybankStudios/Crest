@@ -99,7 +99,6 @@ type_view:
   type: Color32
   expr: "rows($, color((($.valueU32&0x00FFFFFF) << 8) | (($.valueU32&0xFF000000)>>24)), hex(r), hex(g), hex(b), hex(a))"
 }
-theme: Naysayer
 watch_pin:
 {
   expression: "state.font"
@@ -135,3 +134,5 @@ type_view:
   type: Rectanglef
   expr: "rows($, $.X, $.Y, $.Width, $.Height)"
 }
+theme: "Solarized (Dark)"
+name: Crest
