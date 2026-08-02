@@ -19,9 +19,9 @@ Description:
 // Debug builds often take less time to compile as well.
 #define DEBUG_BUILD  1
 // This disables hot-reloading support, the platform and game are one unit. Also PigCore gets compiled in directly rather than being used as a dynamic library
-#define BUILD_INTO_SINGLE_UNIT  1
+#define BUILD_INTO_SINGLE_UNIT  0
 // The .exe will use the resources_zip.h/c file instead of loading resources from disk
-#define USE_BUNDLED_RESOURCES   1
+#define USE_BUNDLED_RESOURCES   0
 // Enables linking with tracy.lib to enable profiling through Tracy
 #define PROFILING_ENABLED       0
 
@@ -104,6 +104,9 @@ Description:
 #define BUILD_WITH_HTTP       1
 #define BUILD_WITH_FREETYPE   1
 #define BUILD_WITH_GTK        0
+#define BUILD_WITH_PROTOBUF   0
+
+#define GENERATE_PROTOBUF 0
 
 #define PROJECT_READABLE_NAME Crest
 #define PROJECT_FOLDER_NAME   Crest
