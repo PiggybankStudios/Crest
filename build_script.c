@@ -12,13 +12,13 @@ Description:
 	** to-recompile this tool every time one of the options changes
 */
 
-#define PIG_BUILD_PRINT_SYS_CMDS 0
-#define PIG_BUILD_INCLUDE_OPTIONAL_HEADERS 1
 #define PIG_BUILD_FOLDER_PATH "../pig_build"
 #include "pig_build.h"
+#include "pig_build_optional.h"
 
 int main(int argc, char* argv[])
 {
+	PigBuildDebugMode = false;
 	RecompileIfNeeded(StrArray_Empty);
 	PrintLine("[%s...]", BUILD_SCRIPT_EXE_NAME);
 	
