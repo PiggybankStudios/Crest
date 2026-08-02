@@ -1,6 +1,5 @@
 *.sublime-workspace
 core/
-pig_build/
 # _data/resources/
 build/
 data/*.exe
